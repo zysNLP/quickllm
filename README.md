@@ -4,7 +4,7 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 
 ​		再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
-​		**下次更新：1.基于PyTorch的MOE模型；2.TensorRT和推理加速的相关工作**
+​		<span style="color:blue;">下次更新：1.基于PyTorch的MOE模型；2.TensorRT和推理加速的相关工作</span>
 
 **调试方式：**
 
