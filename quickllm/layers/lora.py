@@ -15,6 +15,8 @@ class Lora(Layer):
 
     def __init__(self, r, output_size, alpha, dropout, use_bias=False, name='lora', **kwargs):
         super().__init__(name=name, **kwargs)
+        self.low = None
+        self.up = None
         self.r = r
         self.output_size = output_size
         self.scaling = alpha / r
