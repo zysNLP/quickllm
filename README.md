@@ -15,11 +15,11 @@ import sys
 sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级目录
 ```
 
-**核心功能**：chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
+**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
 
-**项目优势：**使用相对路径关联代码，方便跳转查看和调试
+**项目优势：** 使用相对路径关联代码，方便跳转查看和调试
 
-**后续更新：**除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
+**后续更新：** 除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
 
 **视频课程：**[《大模型理论基础和工业落地实战》](https://edu.csdn.net/course/detail/39082)，基于triton+flask+chatglm2，自己讲的。关注公众号”NLP小讲堂“回复你的联系方式，联系作者打五折
 
@@ -131,9 +131,9 @@ if __name__ == '__main__':
 
 
 
-**快速微调**：将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
+**快速微调**： 将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
 
-**快速部署：**将examples/serving/basic_simple_web_serving_simbert.py文件转移至根目录下，添加断点，启动调试！
+**快速部署：** 将examples/serving/basic_simple_web_serving_simbert.py文件转移至根目录下，添加断点，启动调试！
 
 
 
