@@ -41,9 +41,9 @@ pip install -r requirements.txt -i https://pypi.douban.com/simple
 
 ​	**2.编写加载prompt、定义模型（训练和验证函数）**
 
-​	**3.载入数据，启动训练和验证，调试代码！**
+​	**3.载入数据，启动训练和验证，调试代码，调试完成！保存修改脚本到examples，处理下一个**
 
-**快速启动：**将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
+**快速启动：** 将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
 
 ```python
 # -*- coding: utf-8 -*- 
