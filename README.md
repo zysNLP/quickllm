@@ -1,6 +1,8 @@
 ## 一. 简介
 
-LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用和代码
+如果你看到这个项目，最终没有下载下来调试，你可以不用继续往下看了，没有意义。
+
+一个LLM学习资源库。使用pytorch和部分Tensorflow2实现的项目，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用和代码
 
 再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
@@ -12,7 +14,7 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 
 ​		**格式1. 只有一个脚本文件，将examples中的py脚本复制到quickllm文件夹的同级目录（当前项目根目录）**
 
-​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径或者格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录**
+​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径+格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录！**
 
 ```python
 import sys
@@ -61,6 +63,8 @@ import os
 import torch
 from loguru import logging
 from transformers import AutoTokenizer
+# import sys
+# sys.path.append('/path/to/father directory of quickllm')  # quickllm文件夹的父级目录的绝对路径
 
 from quickllm.models import build_transformer_model
 from quickllm.generation import SeqGeneration
@@ -229,9 +233,9 @@ if __name__ == '__main__':
 }
 ```
 
-## 6. 其他
+## 更新进行时......
 
-关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章和[视频](https://edu.csdn.net/course/detail/39082)同步，[B站关注](https://www.bilibili.com/video/BV1hG411e7Ng/?spm_id_from=333.999.0.0&vd_source=9a2f107418c10b543b13cbd8e1f9e98d)：
+关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章和[配套视频](https://edu.csdn.net/course/detail/39082)同步，[B站关注](https://www.bilibili.com/video/BV1hG411e7Ng/?spm_id_from=333.999.0.0&vd_source=9a2f107418c10b543b13cbd8e1f9e98d)：
 
 [《浅谈MOE的代码原理（一），是否足够对标self-attention？》](https://mp.weixin.qq.com/s/mbXePBZXIiN3aa8sszPzHQ)参考借鉴：[Mistral Transformers](https://github.com/mistralai/mistral-src)，[Mixture of Expert](https://github.com/lucidrains/mixture-of-experts.git)
 
