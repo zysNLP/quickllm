@@ -231,5 +231,9 @@ if __name__ == '__main__':
 
 ## 6. 其他
 
-关注公众号《NLP小讲堂》，更多高效内容及时订阅。
+关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章同步：
+
+《浅谈MOE的原理，有点类似自注意力的另一种表达方式？》参考借鉴：[Mistral Transformers](https://github.com/mistralai/mistral-src)，[Mixture of Expert](https://github.com/lucidrains/mixture-of-experts.git)
+
+《Triton复杂又简单：把部署切成厚厚的薄片。。》参考借鉴：[NGC Triton镜像](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver)，[Triton Inference Server GitHub官网](https://github.com/triton-inference-server/server)
 
