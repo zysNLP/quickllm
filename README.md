@@ -34,7 +34,7 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 **基本流程：**
 
 ```shell
-pip install -r requirements.txt -i https://pypi.douban.com/simple
+pip install -r requirements.txt -i https://pypi.douban.com/simple    # 无需下载gpu版PyTorch，很多时候只要能调试跑起来管他cpu还是gpu
 ```
 
 ​	**1. 定义config参数和配置、加载数据集（其他参数列表参考第三部分）；**
