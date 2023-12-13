@@ -25,8 +25,6 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 
 **后续更新：** 除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
 
-**视频课程：**[《大模型理论基础和工业落地实战》](https://edu.csdn.net/course/detail/39082)，基于triton+flask+chatglm2，自己讲的。关注公众号”NLP小讲堂“回复你的联系方式，联系作者打五折
-
 
 
 ## 二.使用方式(以chatglm2为例)
@@ -232,6 +230,8 @@ if __name__ == '__main__':
 ```
 
 ## 6. 其他
+
+**视频课程：**[《大模型理论基础和工业落地实战》](https://edu.csdn.net/course/detail/39082)，基于triton+flask+chatglm2，自己讲的。关注公众号”NLP小讲堂“回复你的联系方式，联系作者打五折
 
 <table border="0">
   <tbody>
