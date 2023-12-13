@@ -1,16 +1,16 @@
 ## 一. 简介
 
-如果你看到这个项目，最终没有下载下来调试，你可以不用继续往下看了，没有意义。
+如果你看到这个项目，最终没有下载下来调试就学习LLM，可以不用继续往下看了，根本就学不懂。
 
-一个LLM学习资源库。使用pytorch和部分Tensorflow2实现的项目，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用和代码
+一个LLM学习资源库。使用pytorch和部分Tensorflow2实现， **<u>*本地运行和调试*</u>** @大模型LLM相关的应用和代码
 
-再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
+再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM源代码的主要思想！
 
 ```python
 # 下次更新：1.基于PyTorch的MOE模型；2.TensorRT和推理加速的相关工作
 ```
 
-**调试方式：**
+**调试方式（重要！！！学会使用PyCharm/VsCode，Jupiter等调试不方便）：**
 
 ​		**格式1. 只有一个脚本文件，将examples中的py脚本复制到quickllm文件夹的同级目录（当前项目根目录）**
 
@@ -21,11 +21,7 @@ import sys
 sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级目录
 ```
 
-**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
-
-**项目优势：** 使用相对路径关联代码，方便跳转查看和调试
-
-**后续更新：** 除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
+**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型运行、训练、推理和部署，缺一不可。
 
 
 
@@ -42,7 +38,7 @@ pip install -r requirements.txt -i https://pypi.douban.com/simple
 
 ​	chatglm2参数下载：https://huggingface.co/THUDM/chatglm2-6b；
 
-​	chatglm2数据下载：https://cloud.tsinghua.edu.cn/f/b3f119/a008264b1cabd1/?dl=1
+​	chatglm2数据下载(不微调就不需要)：https://cloud.tsinghua.edu.cn/f/b3f119/a008264b1cabd1/?dl=1
 
 ​	**2.编写加载prompt、定义模型（训练和验证函数）**
 
@@ -78,9 +74,10 @@ class ExpertModel:
         self.choice = 'default'  # default, int4, 32k
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        # 来自https://huggingface.co/THUDM/chatglm2-6b；
+        # 来自刚刚下载的：https://huggingface.co/THUDM/chatglm2-6b；
         self.dir_path = "/path/to/my/pretrain_ckpt/glm/chatglm2-6B"
         self.checkpoint_path = [os.path.join(dir_path, i) for i in os.listdir(dir_path) if i.endswith('.bin')]
+        
         # 来自项目中的：examples/basic/glm/chatglm2-6B/quickllm_config.json
         self.config_path = dir_path + '/quickllm_config.json'
 
