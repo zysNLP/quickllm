@@ -197,10 +197,9 @@ if __name__ == '__main__':
 
 ## 四. 最新更新：
 
-- **20231213**：增加Triton请求ChatGLM3基础类实现
+- **20231213**：增加Triton请求ChatGLM系列模型基础实现
 - **20231212**：增加PyTorch的MOE模型基础类实现和调试代码
 - **20231208**：增加Tensorflow2的各类激活函数实现
-- **20231203**：增加Tensorflow2的GlobalPointer实现
 - **20231201**：增加Tensorflow2的ROPE函数实现
 - **20231122**：增加Tensorflow2的LORA实现
 
