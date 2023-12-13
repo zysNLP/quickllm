@@ -25,14 +25,58 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 
 
 
-## 二.使用方式(以chatglm2为例)
+## 二.快速启动（以moe为例）
 
 **基本流程：**
 
+**1.启动PyCharm，配置好环境依赖：**
+
 ```shell
-#  无需下载gpu版PyTorch，管他cpu还是gpu，只要能调试跑起来就是好pu
-pip install -r requirements.txt -i https://pypi.douban.com/simple
+pip install -r requirements.txt -i https://pypi.douban.com/simple    # moe可直接使用cpu torch调试
 ```
+
+**2.在以下代码中添加断点，开始调试和学习moe模型**
+
+**3.完成后将代码转移回examples中，开启下个项目的调试和学习**
+
+```python
+# -*- coding: utf-8 -*- 
+# @Time : 2023/12/13 02:09 
+# @Author : ys 
+# @File : basic_language_model_moe.py
+
+import torch
+from torch import nn
+from quickllm.layers.moe import MoE
+# import sys
+# sys.path.append('/path/to/father directory of quickllm')  # quickllm文件夹的父级目录的绝对路径
+
+
+if __name__ == "__main__":
+
+    moe = MoE(
+        dim=512,  								    # 输入张量的维度
+        num_experts=16,  						 # 专家数量，可以增加该参数而不增加计算量
+        hidden_dim=512 * 4,  					# 每个专家网络中的隐藏层维度，默认为 4 倍输入维度
+        activation=nn.LeakyReLU,  		   # 使用的激活函数，默认为 GELU
+        second_policy_train='random',      # 使用的第二名专家的训练策略
+        second_policy_eval='random',       # 使用的第二名专家的验证策略
+        second_threshold_train=0.2,         # 训练时使用的第二名专家阈值
+        second_threshold_eval=0.2,          # 测试时使用的第二名专家阈值
+        capacity_factor_train=1.25,            # 每个专家网络在单个批次中的固定容量，需要额外的容量以防门控不平衡
+        capacity_factor_eval=2.,                  # capacity_factor_* 应设置为 >=1 的值
+        loss_coef=1e-2                                  # 辅助专家平衡辅助损失的乘数
+    )
+    inputs = torch.randn(4, 1024, 512)
+    out, aux_loss = moe(inputs) 
+    print(out.shape, aux_loss.shape)
+```
+
+
+
+
+
+## 三.其他使用方式(以chatglm2为例)
 
 ​	**1. 定义config参数和配置、加载数据集（其他参数列表参考第三部分）；**
 
@@ -44,7 +88,7 @@ pip install -r requirements.txt -i https://pypi.douban.com/simple
 
 ​	**3.载入数据，启动训练和验证，调试代码，调试完成！保存修改脚本到examples，处理下一个**
 
-**快速启动：** 将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
+**快速对话：** 将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
 
 ```python
 # -*- coding: utf-8 -*- 
@@ -132,8 +176,6 @@ if __name__ == '__main__':
     expert_bot = ExpertModel()
     expert_bot.main()
 ```
-
-
 
 **快速微调**： 将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
 
