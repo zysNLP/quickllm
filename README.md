@@ -231,17 +231,5 @@ if __name__ == '__main__':
 
 ## 6. 其他
 
-<table border="0">
-  <tbody>
-    <tr align="center" >
-      <td>
-         <a href="https://github.com/zysNLP"><img width="700" height="250" src="./docs/pics/wechat_micro.png" alt="pic"></a><br>
-         <a href="https://github.com/zysNLP">微信号</a> 
-      </td>
-      <td>
-         <a href="https://github.com/zysNLP"><img width="190" height="250" src="./docs/pics/wechat_group.jpg" alt="pic"></a><br>
-         <a href="https://github.com/zysNLP">微信群</a> 
-      </td>   
-      </tr>
-  </tbody>
-</table>
+关注公众号《NLP小讲堂》，更多高效内容及时订阅。
+
