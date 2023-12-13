@@ -231,8 +231,6 @@ if __name__ == '__main__':
 
 ## 6. 其他
 
-**视频课程：**[《大模型理论基础和工业落地实战》](https://edu.csdn.net/course/detail/39082)，基于triton+flask+chatglm2，自己讲的。关注公众号”NLP小讲堂“回复你的联系方式，联系作者打五折
-
 <table border="0">
   <tbody>
     <tr align="center" >

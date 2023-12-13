@@ -1,5 +1,7 @@
 #! -*- coding: utf-8 -*-
 # llama系列的指令微调, 基于lora/qlora
+# 视频课程：[《大模型理论基础和工业落地实战》](https://edu.csdn.net/course/detail/39082)
+# 基于triton+flask+chatglm2，自己讲的。关注公众号”NLP小讲堂“回复你的联系方式，联系作者打五折
 # peft和transformer包是耦合的，因此这里用法和hf的略有不同
 # 这里使用的数据集为 https://github.com/FlagAlpha/Llama2-Chinese/tree/main/data
 
