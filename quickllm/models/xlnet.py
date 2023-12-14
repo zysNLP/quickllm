@@ -1,5 +1,5 @@
 import imp
-from quickllm.models.transformer_xl import Transformer_XL
+from .transformer_xl import Transformer_XL
 import torch
 import re
 

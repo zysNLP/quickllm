@@ -1,6 +1,6 @@
-from quickllm.models.transformer import Encoder, Decoder, Transformer
-from quickllm.snippets import insert_arguments, delete_arguments
-from quickllm.layers import LayerNorm, T5Layer
+from .transformer import Encoder, Decoder, Transformer
+from ..snippets import insert_arguments, delete_arguments
+from ..layers import LayerNorm, T5Layer
 from torch import nn
 import copy
 

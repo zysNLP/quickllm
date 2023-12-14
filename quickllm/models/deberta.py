@@ -1,6 +1,6 @@
-from quickllm.models.bert import BERT
-from quickllm.snippets import delete_arguments
-from quickllm.layers import ConvLayer
+from .bert import BERT
+from ..snippets import delete_arguments
+from ..layers import ConvLayer
 
 
 class DebertaV2(BERT):

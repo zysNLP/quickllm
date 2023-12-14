@@ -1,7 +1,7 @@
-from quickllm.models.bert import BERT
-from quickllm.snippets import insert_arguments, delete_arguments
-from quickllm.layers import AdaptiveEmbedding, XlnetPositionsEncoding
-from quickllm.layers import  BlockIdentity, XlnetLayer
+from .bert import BERT
+from ..snippets import insert_arguments, delete_arguments
+from ..layers import AdaptiveEmbedding, XlnetPositionsEncoding
+from ..layers import  BlockIdentity, XlnetLayer
 from torch import nn
 import torch
 import copy

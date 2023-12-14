@@ -1,4 +1,4 @@
-from quickllm.models.bert import BERT
+from .bert import BERT
 from torch import nn
 import copy
 

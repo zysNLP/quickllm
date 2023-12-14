@@ -3,8 +3,8 @@ import torch
 import math
 import numpy as np
 import torch.nn.functional as F
-from quickllm.layers.position_encoding import *
-from quickllm.activations import get_activation
+from .position_encoding import *
+from ..activations import get_activation
 from torch4keras.snippets import log_warn_once
 import importlib.util
 

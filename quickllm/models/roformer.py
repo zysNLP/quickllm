@@ -1,5 +1,5 @@
-from quickllm.models.bert import BERT
-from quickllm.snippets import delete_arguments
+from .bert import BERT
+from ..snippets import delete_arguments
 import re
 
 

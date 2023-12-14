@@ -3,5 +3,5 @@
 '''
 
 from torch4keras.trainer import *  # torch4keras>=0.1.2.post2
-from quickllm.trainer.ppo_trainer import PPOTrainer
-from quickllm.trainer.dpo_trainer import DPOTrainer
+from .ppo_trainer import PPOTrainer
+from .dpo_trainer import DPOTrainer

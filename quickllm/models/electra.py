@@ -1,7 +1,7 @@
-from quickllm.models.bert import BERT
-from quickllm.snippets import insert_arguments, delete_arguments
+from .bert import BERT
+from ..snippets import insert_arguments, delete_arguments
 from torch import nn
-from quickllm.activations import get_activation
+from ..activations import get_activation
 
 
 class ELECTRA(BERT):

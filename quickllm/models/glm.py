@@ -1,7 +1,7 @@
-from quickllm.models.transformer import Decoder
-from quickllm.layers import LayerNorm, BertLayer, BlockIdentity
-from quickllm.snippets import delete_arguments
-from quickllm.activations import get_activation
+from .transformer import Decoder
+from ..layers import LayerNorm, BertLayer, BlockIdentity
+from ..snippets import delete_arguments
+from ..activations import get_activation
 import torch
 from torch import nn
 import copy

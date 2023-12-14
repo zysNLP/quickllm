@@ -1,6 +1,6 @@
-from quickllm.models.transformer import Decoder
-from quickllm.snippets import delete_arguments
-from quickllm.layers import MultiHeadAttentionLayer, BertLayer, BlockIdentity
+from .transformer import Decoder
+from ..snippets import delete_arguments
+from ..layers import MultiHeadAttentionLayer, BertLayer, BlockIdentity
 import math
 import torch
 from torch import nn

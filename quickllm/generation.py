@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import inspect
-from quickllm.snippets import take_along_dim, torch_div, sequence_padding, create_position_ids_start_at_padding, log_info, log_warn
-from quickllm.tokenizers import TokenizerBase
+from .snippets import take_along_dim, torch_div, sequence_padding, create_position_ids_start_at_padding, log_info, log_warn
+from .tokenizers import TokenizerBase
 from packaging import version
 from contextlib import contextmanager
 import gc

@@ -1,6 +1,6 @@
-from quickllm.models.transformer import Decoder
-from quickllm.snippets import delete_arguments
-from quickllm.layers import BertLayer, BlockIdentity
+from .transformer import Decoder
+from ..snippets import delete_arguments
+from ..layers import BertLayer, BlockIdentity
 from torch import nn
 import copy
 import torch

@@ -1,4 +1,4 @@
-from quickllm.models.transformer import Transformer
+from .transformer import Transformer
 import torch
 
 

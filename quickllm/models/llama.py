@@ -1,6 +1,6 @@
-from quickllm.models.transformer import Decoder
-from quickllm.snippets import delete_arguments
-from quickllm.layers import BlockIdentity, LlamaFeedForward, NormHead
+from .transformer import Decoder
+from ..snippets import delete_arguments
+from ..layers import BlockIdentity, LlamaFeedForward, NormHead
 import torch
 
 class LLaMA(Decoder):

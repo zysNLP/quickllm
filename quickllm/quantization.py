@@ -13,7 +13,7 @@ import re
 from tqdm import tqdm
 from functools import partial
 import inspect
-from quickllm.snippets import log_error
+from .snippets import log_error
 
 try:
     from cpm_kernels.kernels.base import LazyKernelCModule, KernelFunction, round_up

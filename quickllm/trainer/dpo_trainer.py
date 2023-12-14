@@ -1,6 +1,6 @@
 import torch
 from torch4keras.trainer import Trainer
-from quickllm.models import BaseModel
+from ..models import BaseModel
 import copy
 
 

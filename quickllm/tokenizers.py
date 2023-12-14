@@ -9,7 +9,7 @@ import logging
 from typing import Any
 import unicodedata
 from io import open
-from quickllm.snippets import truncate_sequences, is_string, lowercase_and_normalize, sequence_padding
+from .snippets import truncate_sequences, is_string, lowercase_and_normalize, sequence_padding
 import re
 import six
 from collections import OrderedDict

@@ -1,5 +1,5 @@
-from quickllm.models.transformer import Decoder
-from quickllm.layers import LlamaFeedForward
+from .transformer import Decoder
+from ..layers import LlamaFeedForward
 
 
 class InternLM(Decoder):

@@ -3,10 +3,11 @@
 import torch
 from torch import nn
 from torch4keras.trainer import Trainer
-from quickllm.models import BaseModel
-from quickllm.generation import SeqGeneration, Seq2SeqGeneration
+from ..models import BaseModel
+from ..generation import SeqGeneration, Seq2SeqGeneration
 from torch4keras.snippets import DottableDict
 import importlib
+
 try:
     import trl
     trl.trainer.ppo_trainer.SUPPORTED_ARCHITECTURES = (BaseModel, )

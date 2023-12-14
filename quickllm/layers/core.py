@@ -1,8 +1,8 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from quickllm.activations import get_activation
-from quickllm.layers.position_encoding import SinusoidalPositionEncoding
+from ..activations import get_activation
+from .position_encoding import SinusoidalPositionEncoding
 
 
 class LayerNorm(nn.Module):

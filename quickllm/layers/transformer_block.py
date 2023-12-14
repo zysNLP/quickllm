@@ -2,8 +2,8 @@ from torch import nn
 import torch
 import math
 import torch.nn.functional as F
-from quickllm.layers.core import LayerNorm, PositionWiseFeedForward
-from quickllm.layers.attention import MultiHeadAttentionLayer, GatedAttentionUnit
+from .core import LayerNorm, PositionWiseFeedForward
+from .attention import MultiHeadAttentionLayer, GatedAttentionUnit
 
 
 class BertLayer(nn.Module):

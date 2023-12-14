@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from quickllm.activations import get_activation
-from quickllm.layers.core import LayerNorm
+from ..activations import get_activation
+from .core import LayerNorm
 import random
 import warnings
 import math

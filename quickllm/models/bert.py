@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 from torch.utils.checkpoint import checkpoint
-from quickllm.models.base import BERT_BASE
-from quickllm.layers import LayerNorm, BertEmbeddings
-from quickllm.layers import LayerNorm, BertEmbeddings, BertLayer, BlockIdentity
-from quickllm.snippets import old_checkpoint, create_position_ids_start_at_padding, DottableDict
-from quickllm.activations import get_activation
+from .base import BERT_BASE
+from ..layers import LayerNorm, BertEmbeddings
+from ..layers import LayerNorm, BertEmbeddings, BertLayer, BlockIdentity
+from ..snippets import old_checkpoint, create_position_ids_start_at_padding, DottableDict
+from ..activations import get_activation
 import copy
 from packaging import version
 

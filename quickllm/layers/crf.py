@@ -2,7 +2,7 @@ from torch import nn
 import torch
 from typing import List, Optional, Union
 import numpy as np
-from quickllm.snippets import torch_div
+from ..snippets import torch_div
 
 
 class CRF(nn.Module):

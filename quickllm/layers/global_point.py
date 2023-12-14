@@ -1,7 +1,7 @@
 from torch import nn
 import torch
-from quickllm.layers.position_encoding import RoPEPositionEncoding
-from quickllm.activations import get_activation
+from .position_encoding import RoPEPositionEncoding
+from ..activations import get_activation
 
 
 class GlobalPointer(nn.Module):

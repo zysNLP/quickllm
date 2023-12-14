@@ -11,7 +11,7 @@ import numpy as np
 import time
 from copy import deepcopy
 
-from triton_client import TritonHttpClient
+from .triton_client import TritonHttpClient
 
 
 class ChatGLMTokenizer(PreTrainedTokenizer):

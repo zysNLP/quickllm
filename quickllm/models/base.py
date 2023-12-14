@@ -4,9 +4,9 @@
 '''
 import torch
 from torch import nn
-from quickllm.layers import LayerNorm
-from quickllm.snippets import torch_div, log_warn, load_state_dict_into_meta_model
-from quickllm.snippets import take_along_dim, get_parameter_device
+from ..layers import LayerNorm
+from ..snippets import torch_div, log_warn, load_state_dict_into_meta_model
+from ..snippets import take_along_dim, get_parameter_device
 import warnings
 from torch4keras.model import *
 from tqdm import tqdm

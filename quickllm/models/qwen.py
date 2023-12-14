@@ -1,4 +1,4 @@
-from quickllm.models.internlm import InternLM
+from .internlm import InternLM
 import torch
 
 

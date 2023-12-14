@@ -1,7 +1,7 @@
-from quickllm.models.roformer import RoFormerV2
+from .roformer import RoFormerV2
 from torch import nn
 import copy
-from quickllm.layers import LayerNorm, BlockIdentity, GatedAttentionUnit
+from ..layers import LayerNorm, BlockIdentity, GatedAttentionUnit
 import torch.nn.functional as F
 import torch
 

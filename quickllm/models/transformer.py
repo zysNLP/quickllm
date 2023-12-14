@@ -1,9 +1,9 @@
-from quickllm.models.bert import BERT
-from quickllm.models.base import LM_Mask, BERT_BASE
-from quickllm.snippets import delete_arguments, insert_arguments
-from quickllm.activations import get_activation
-from quickllm.layers import LayerNorm
-from quickllm.generation import SeqGeneration, Seq2SeqGeneration
+from .bert import BERT
+from .base import LM_Mask, BERT_BASE
+from ..snippets import delete_arguments, insert_arguments
+from ..activations import get_activation
+from ..layers import LayerNorm
+from ..generation import SeqGeneration, Seq2SeqGeneration
 from torch import nn
 import torch
 

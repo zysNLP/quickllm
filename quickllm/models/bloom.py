@@ -1,5 +1,5 @@
-from quickllm.models.transformer import Decoder
-from quickllm.snippets import delete_arguments
+from .transformer import Decoder
+from ..snippets import delete_arguments
 import torch
 
 
