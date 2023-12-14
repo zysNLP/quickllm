@@ -1,91 +1,51 @@
 ## 一. 简介
 
-如果你看到这个项目，最终没有下载下来调试就学习LLM，可以不用继续往下看了，根本就学不懂。
+LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用和代码
 
-一个LLM学习资源库。使用pytorch和部分Tensorflow2实现， **<u>*本地运行和调试*</u>** @大模型LLM相关的应用和代码
-
-再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM源代码的主要思想！代码经常更新，以最新为准
+再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
 ```python
 # 下次更新：1.基于PyTorch的MOE模型；2.TensorRT和推理加速的相关工作
 ```
 
-**调试方式（重要！！！学会使用PyCharm/VsCode，Jupiter等调试不方便）：**
+**调试方式：**
 
 ​		**格式1. 只有一个脚本文件，将examples中的py脚本复制到quickllm文件夹的同级目录（当前项目根目录）**
 
-​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径+格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录！**
+​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径或者格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录**
 
 ```python
 import sys
 sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级目录
 ```
 
-**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型运行、训练、推理和部署，缺一不可。
+**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
+
+**项目优势：** 使用相对路径关联代码，方便跳转查看和调试
+
+**后续更新：** 除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
 
 
 
-## 二.快速启动（以moe为例）
+## 二.使用方式(以chatglm2为例)
 
 **基本流程：**
 
-**1.启动PyCharm，配置好环境依赖：**
-
 ```shell
-pip install -r requirements.txt -i https://pypi.douban.com/simple    # moe可直接使用cpu torch调试
+pip install -r requirements.txt -i https://pypi.douban.com/simple
 ```
-
-**2.在以下代码中添加断点，开始调试和学习moe模型**
-
-**3.完成后将代码转移回examples中，开启下个项目的调试和学习**
-
-```python
-# -*- coding: utf-8 -*- 
-# @Time : 2023/12/13 02:09 
-# @Author : ys 
-# @File : basic_language_model_moe.py
-
-import torch
-from torch import nn
-from quickllm.layers.moe import MoE
-
-if __name__ == "__main__":
-
-    moe = MoE(
-        dim=512,  # 输入张量的维度
-        num_experts=16,  # 专家数量，可以增加该参数而不增加计算量
-        hidden_dim=512 * 4,  # 每个专家网络中的隐藏层维度，默认为 4 倍输入维度
-        activation=nn.LeakyReLU,  # 使用的激活函数，默认为 GELU
-        second_policy_train='random',  # 使用的第二名专家的训练策略
-        second_policy_eval='random',  # 使用的第二名专家的验证策略
-        second_threshold_train=0.2,  # 训练时使用的第二名专家阈值
-        second_threshold_eval=0.2,  # 测试时使用的第二名专家阈值
-        capacity_factor_train=1.25,  # 每个专家网络在单个批次中的固定容量，需要额外的容量以防门控不平衡
-        capacity_factor_eval=2.,  # capacity_factor_* 应设置为 >=1 的值
-        loss_coef=1e-2  # 辅助专家平衡辅助损失的乘数
-    )
-    inputs = torch.randn(4, 1024, 512)
-    out, aux_loss = moe(inputs)
-    print(out.shape, aux_loss.shape)
-```
-
-
-
-
-
-## 三.其他使用方式(以chatglm2为例)
 
 ​	**1. 定义config参数和配置、加载数据集（其他参数列表参考第三部分）；**
 
 ​	chatglm2参数下载：https://huggingface.co/THUDM/chatglm2-6b；
 
-​	chatglm2数据下载(不微调就不需要)：https://cloud.tsinghua.edu.cn/f/b3f119/a008264b1cabd1/?dl=1
+​	chatglm2数据下载：https://cloud.tsinghua.edu.cn/f/b3f119/a008264b1cabd1/?dl=1
 
 ​	**2.编写加载prompt、定义模型（训练和验证函数）**
 
 ​	**3.载入数据，启动训练和验证，调试代码，调试完成！保存修改脚本到examples，处理下一个**
 
-**快速对话：** 将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
+**快速启动：** 将examples/basic/glm/basic_language_model_chatglm2.py复制到根目录下，添加断点，启动调试！
 
 ```python
 # -*- coding: utf-8 -*- 
@@ -101,8 +61,6 @@ import os
 import torch
 from loguru import logging
 from transformers import AutoTokenizer
-# import sys
-# sys.path.append('/path/to/father directory of quickllm')  # quickllm文件夹的父级目录的绝对路径
 
 from quickllm.models import build_transformer_model
 from quickllm.generation import SeqGeneration
@@ -115,10 +73,9 @@ class ExpertModel:
         self.choice = 'default'  # default, int4, 32k
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        # 来自刚刚下载的：https://huggingface.co/THUDM/chatglm2-6b；
+        # 来自https://huggingface.co/THUDM/chatglm2-6b；
         self.dir_path = "/path/to/my/pretrain_ckpt/glm/chatglm2-6B"
         self.checkpoint_path = [os.path.join(dir_path, i) for i in os.listdir(dir_path) if i.endswith('.bin')]
-        
         # 来自项目中的：examples/basic/glm/chatglm2-6B/quickllm_config.json
         self.config_path = dir_path + '/quickllm_config.json'
 
@@ -173,6 +130,8 @@ if __name__ == '__main__':
     expert_bot = ExpertModel()
     expert_bot.main()
 ```
+
+
 
 **快速微调**： 将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
 
@@ -270,11 +229,13 @@ if __name__ == '__main__':
 }
 ```
 
-## 更新进行时......
+## 6. 其他
 
-关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章和[配套视频](https://edu.csdn.net/course/detail/39082)同步，[B站关注](https://www.bilibili.com/video/BV1hG411e7Ng/?spm_id_from=333.999.0.0&vd_source=9a2f107418c10b543b13cbd8e1f9e98d)：
+关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章和[视频](https://edu.csdn.net/course/detail/39082)同步，[B站关注](https://www.bilibili.com/video/BV1hG411e7Ng/?spm_id_from=333.999.0.0&vd_source=9a2f107418c10b543b13cbd8e1f9e98d)：
 
 [《浅谈MOE的代码原理（一），是否足够对标self-attention？》](https://mp.weixin.qq.com/s/mbXePBZXIiN3aa8sszPzHQ)参考借鉴：[Mistral Transformers](https://github.com/mistralai/mistral-src)，[Mixture of Expert](https://github.com/lucidrains/mixture-of-experts.git)
 
 《Triton复杂又简单：把部署切成厚厚的薄片。。》参考借鉴：[NGC Triton镜像](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver)，[Triton Inference Server GitHub官网](https://github.com/triton-inference-server/server)
+
+《TensorRT-LLM：大模型推理加速必备》参考借鉴[Qwen-TensorRT原理](https://developer.nvidia.com/zh-cn/blog/qwen-model-support-nvidia-tensorrt-llm)，[Qwen-TensorRT代码](https://github.com/Tlntin/Qwen-TensorRT-LLM/tree/main?tab=readme-ov-file)
 
