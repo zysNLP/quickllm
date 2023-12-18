@@ -5,8 +5,18 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
 ```python
-# 下次更新：1.基于PyTorch的MOE模型；2.TensorRT和推理加速的相关工作
+# 下次更新：1.基于PyTorch的Mistral-AI的MOE模型微调；2.各类TensorRT-LLM和推理加速的相关工作
 ```
+
+### 最新更新：
+
+- **20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块**
+- **20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明**
+
+- **20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码**
+- **20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现MOE模型初始调试代码**
+- **20231212：🐯feat(quickllm/layers/lora.py):添加TF2实现的LORA层（初测版）**
+- **20231201：🐯feat: 增加Tensorflow2的ROPE函数实现**
 
 **调试方式：**
 
@@ -20,12 +30,6 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 ```
 
 **核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
-
-**项目优势：** 使用相对路径关联代码，方便跳转查看和调试
-
-**后续更新：** 除了更新更多LLM相关代码，后续会补充tf2的一些实现和服务部署的相关工作，敬请期待
-
-
 
 ## 二.使用方式(以chatglm2为例)
 
@@ -194,14 +198,6 @@ if __name__ == '__main__':
 | embedding| text2vec-base-chinese |shibing624| [torch](https://huggingface.co/shibing624/text2vec-base-chinese) | |
 |          | m3e |moka-ai| [torch](https://huggingface.co/moka-ai) |[config](https://github.com/Tongjilibo/bert4torch/blob/master/examples/basic/embedding/moka-ai@m3e-base/bert4torch_config.json)|
 |          | bge |BAAI| [torch](huggingface.co) |[config](https://github.com/Tongjilibo/bert4torch/blob/master/examples/basic/embedding/moka-ai@m3e-base/bert4torch_config.json)|
-
-## 四. 最新更新：
-
-- **20231213**：增加Triton请求ChatGLM系列模型基础实现
-- **20231212**：增加PyTorch的MOE模型基础类实现和调试代码
-- **20231208**：增加Tensorflow2的各类激活函数实现
-- **20231201**：增加Tensorflow2的ROPE函数实现
-- **20231122**：增加Tensorflow2的LORA实现
 
 ## 五. 鸣谢
 
