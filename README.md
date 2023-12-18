@@ -10,13 +10,14 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 
 ### 最新更新：
 
-- **20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块**
-- **20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明**
+- 20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块
+- 20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明
 
-- **20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码**
-- **20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现MOE模型初始调试代码**
-- **20231212：🐯feat(quickllm/layers/lora.py):添加TF2实现的LORA层（初测版）**
-- **20231201：🐯feat: 增加Tensorflow2的ROPE函数实现**
+- 20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码
+- 20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现MOE模型初始调试代码
+- 20231212：🐯feat(quickllm/layers/lora.py):添加TF2实现的LORA层（初测版）
+- 20231201：🐯feat: 增加Tensorflow2的ROPE函数实现
+- 
 
 **调试方式：**
 
