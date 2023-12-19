@@ -10,6 +10,7 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 
 ### 最新更新：
 
+- 20231219：🐯feat(basic_language_model_moe*):MOE新增2维和3维数据的训练过程（原---moe.py改为---moe_3d.py)
 - 20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块
 - 20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明
 
