@@ -35,7 +35,7 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 
 
 
-### 二、快速启动（以MOE核心代码原理为例）
+## 二、快速调试方式（以MOE核心代码原理为例）
 
 ```python
 # -*- coding: utf-8 -*- 
@@ -70,13 +70,15 @@ if __name__ == "__main__":
 
 
 
-## 三.使用方式(以chatglm2为例)
+## 三.快速finetune方式(以chatglm2为例)
 
-**基本流程：**
+**安装依赖：**
 
 ```shell
 pip install -r requirements.txt -i https://pypi.douban.com/simple
 ```
+
+**快速微调**： 将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
 
 ​	**1. 定义config参数和配置、加载数据集（其他参数列表参考第三部分）；**
 
@@ -173,10 +175,6 @@ if __name__ == '__main__':
     expert_bot = ExpertModel()
     expert_bot.main()
 ```
-
-
-
-**快速微调**： 将examples/llm/task_chatglm2_lora.py文件转移至根目录下，添加断点，启动调试！
 
 **快速部署：** 将examples/serving/basic_simple_web_serving_simbert.py文件转移至根目录下，添加断点，启动调试！
 

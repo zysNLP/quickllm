@@ -7,4 +7,5 @@ tqdm
 peft>=0.7.0
 transformers>=4.32.0
 bert4keras
+scikit-learn
 
