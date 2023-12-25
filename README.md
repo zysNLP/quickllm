@@ -5,18 +5,18 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
 ```python
-# 下次更新：1.基于PyTorch的Mistral-AI的MOE模型微调；2.各类TensorRT-LLM和推理加速的相关工作
+# 下次更新：1.基于PyTorch的Mistral-8x7B和Mixtral-8x7B-Instruct-v0.1的MOE模型微调；2.各类TensorRT-LLM和推理加速的相关工作
 ```
 
 ### 最新更新：
 
+- 20231225：🐯feat(quickllm/layers/moe_by_transformers.py):新增transformers包的Mixtral-8x7B / MOE源代码和调试脚本
 - 20231222：🐯feat(quickllm/layers/multi_query_attention.py):添加调试transformers包MQA的方法
 - 20231219：🐯feat(basic_language_model_moe*):MOE新增2维和3维数据的训练过程
 - 20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块
 - 20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明
 - 20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码
-- 20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现MOE模型初始调试代码
-- 20231212：🐯feat(quickllm/layers/lora.py):添加TF2实现的LORA层（初测版）
+- 20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现Mixtral-8x7B、MOE模型初始调试代码
 
 **调试方式：**
 
@@ -263,6 +263,8 @@ if __name__ == '__main__':
 ## 6. 其他
 
 关注公众号《NLP小讲堂》，更多高效内容及时订阅，最新文章和[视频](https://edu.csdn.net/course/detail/39082)同步，[B站关注](https://www.bilibili.com/video/BV1hG411e7Ng/?spm_id_from=333.999.0.0&vd_source=9a2f107418c10b543b13cbd8e1f9e98d)：
+
+《Mixtral-8x7B-Instruct-v0.1的finetune微调实战》：参考借鉴[Aurora](https://github.com/WangRongsheng/Aurora)，[Firefly](https://github.com/yangjianxin1/Firefly)
 
 [《浅谈MOE的代码原理（一），是否足够对标self-attention？》](https://mp.weixin.qq.com/s/mbXePBZXIiN3aa8sszPzHQ)参考借鉴：[Mistral Transformers](https://github.com/mistralai/mistral-src)，[Mixture of Expert](https://github.com/lucidrains/mixture-of-experts.git)
 
