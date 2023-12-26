@@ -1,3 +1,4 @@
 .idea
+**/__pycache__/
 .idea/*
 del_cache.py
