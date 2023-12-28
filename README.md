@@ -29,7 +29,9 @@ import sys
 sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级目录
 ```
 
-**核心功能**： chatglm、chatglm2、llama、llama2、 baichuan、ziya、bloom等开源大模型权重进行推理和微调、prompt应用
+**核心功能**： Mixtral-7x8B、MOE、ChatGLM123、LLaMa12、 BaChuan、Qwen等开源大模型权重进行推理和微调、prompt应用
+
+<p style="color:red;">这段文字是红色的。</p>
 
 
 
