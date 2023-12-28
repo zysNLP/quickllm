@@ -33,7 +33,9 @@ sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级�
 
 
 
-## 二、快速调试! Mixtral-7x8B在transformers模块中的MOE核心代码
+## 二、快速调试Mixtral-7x8B在transformers模块中的MOE核心代码
+
+Time to debug Mixtral-7x8B-instruct-v0.1 models one line by one line immediately!
 
 ```python
 # -*- coding: utf-8 -*-
