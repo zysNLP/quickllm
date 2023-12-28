@@ -1,6 +1,8 @@
 ## 一. 简介
 
-LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用和代码
+LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用
+
+#### **核心功能**： Mixtral-7x8B、MOE、ChatGLM3、LLaMa2、 BaChuan、Qwen-TensorRT等
 
 再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
 
@@ -18,54 +20,44 @@ LLM学习资源库。一个使用pytorch和部分Tensorflow2实现的项目，�
 - 20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码
 - 20231213：🐯feat(basic_language_model_moe.py):添加PyTorch实现Mixtral-8x7B、MOE模型初始调试代码
 
-**调试方式：**
+### **调试方式!!!：**
 
 ​		**格式1. 只有一个脚本文件，将examples中的py脚本复制到quickllm文件夹的同级目录（当前项目根目录）**
 
-​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径或者格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录**
+​		**格式2. 如果调试脚本是个文件夹，推荐将依赖改成相对路径-格式1的形式；或者在需要使用from quickllm导包调用的脚本代码中添加父级目录**
 
 ```python
 import sys
 sys.path.append('/path/to/directory of quickllm')  # quickllm文件夹的父级目录
 ```
 
-**核心功能**： Mixtral-7x8B、MOE、ChatGLM123、LLaMa12、 BaChuan、Qwen等开源大模型权重进行推理和微调、prompt应用
-
-<p style="color:red;">这段文字是红色的。</p>
 
 
-
-## 二、快速调试方式（以MOE核心代码原理为例）
+## 二、快速调试! Mixtral-7x8B在transformers模块中的MOE核心代码
 
 ```python
-# -*- coding: utf-8 -*- 
-# @Time : 2023/12/13 02:09 
-# @Author : ys 
-# @File : basic_language_model_moe.py
+# -*- coding: utf-8 -*-
+"""
+    @Project ：quickllm
+    @File    ：basic_language_model_moe_transformers.py
+    @Author  ：ys
+    @Time    ：2023/12/21 18:10
+    Mixtral-8x7B 模型中的moe部分，以下代码来自官方transformers库
+"""
 
 import torch
-from torch import nn
-from quickllm.layers.moe import MoE
+torch.manual_seed(123)
 
+from quickllm.layers.moe_by_transformers import MixtralConfig
+from quickllm.layers.moe_by_transformers import MixtralSparseMoeBlock
 
-if __name__ == "__main__":
+config = MixtralConfig()
+moe = MixtralSparseMoeBlock(config)
 
-    moe = MoE(
-        dim=512,  # 输入张量的维度
-        num_experts=16,  # 专家数量，可以增加该参数而不增加计算量
-        hidden_dim=512 * 4,  # 每个专家网络中的隐藏层维度，默认为 4 倍输入维度
-        activation=nn.LeakyReLU,  # 使用的激活函数，默认为 GELU
-        second_policy_train='random',  # 使用的第二名专家的训练策略
-        second_policy_eval='random',  # 使用的第二名专家的验证策略
-        second_threshold_train=0.2,  # 训练时使用的第二名专家阈值
-        second_threshold_eval=0.2,  # 测试时使用的第二名专家阈值
-        capacity_factor_train=1.25,  # 每个专家网络在单个批次中的固定容量，需要额外的容量以防门控不平衡
-        capacity_factor_eval=2.,  # capacity_factor_* 应设置为 >=1 的值
-        loss_coef=1e-2  # 辅助专家平衡辅助损失的乘数
-    )
-    inputs = torch.randn(4, 1024, 512)
-    out, aux_loss = moe(inputs)  # (4, 1024, 512), (1,)
-    print(out.shape, aux_loss.shape)
+hidden_states = torch.randn(4, 71, 4096)
+hidden_states, router_logits = moe(hidden_states)
+
+print(hidden_states.shape, router_logits.shape)
 ```
 
 
