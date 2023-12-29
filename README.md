@@ -266,5 +266,6 @@ if __name__ == '__main__':
 
 《Triton复杂又简单：把部署切成厚厚的薄片。。》参考借鉴：[NGC Triton镜像](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver)，[Triton Inference Server GitHub官网](https://github.com/triton-inference-server/server)
 
-《TensorRT-LLM：大模型推理加速必备》参考借鉴[Qwen-TensorRT原理](https://developer.nvidia.com/zh-cn/blog/qwen-model-support-nvidia-tensorrt-llm)，[Qwen-TensorRT代码](https://github.com/Tlntin/Qwen-TensorRT-LLM/tree/main?tab=readme-ov-file)
+《TensorRT-LLM：大模型推理加速必备》参考借鉴：[Qwen-TensorRT原理](https://developer.nvidia.com/zh-cn/blog/qwen-model-support-nvidia-tensorrt-llm)，[Qwen-TensorRT代码](https://github.com/Tlntin/Qwen-TensorRT-LLM/tree/main?tab=readme-ov-file)
 
+《LORA论文解读：大模型的低秩适应》参考借鉴：[LORA论文](https://arxiv.org/pdf/2106.09685.pdf)，[LORA论文解读](https://zhuanlan.zhihu.com/p/624576869)
