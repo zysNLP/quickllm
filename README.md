@@ -4,7 +4,7 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 #### **核心功能**： Mixtral-7x8B、MOE、ChatGLM3、LLaMa2、 BaChuan、Qwen-TensorRT等
 
-再次强调：强调本地调试习惯，强调代码跳转，强调快速掌握LLM相关工作
+再次强调：强调本地调试、代码跳转、快速掌握LLM！basic_llm\*和basic_run\*分别是调试和运行模式
 
 ```python
 # 下次更新：1.基于PyTorch的Mistral-8x7B和Mixtral-8x7B-Instruct-v0.1的MOE模型微调；2.各类TensorRT-LLM和推理加速的相关工作
@@ -41,7 +41,7 @@ Time to debug Mixtral-7x8B-instruct-v0.1 models one line by one line immediately
 # -*- coding: utf-8 -*-
 """
     @Project ：quickllm
-    @File    ：basic_language_model_moe_transformers.py
+    @File    ：basic_llm_moe_transformers.py
     @Author  ：ys
     @Time    ：2023/12/21 18:10
     Mixtral-8x7B 模型中的moe部分，以下代码来自官方transformers库

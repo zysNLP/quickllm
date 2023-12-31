@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
     @Project ：quickllm
-    @File    ：basic_language_model_chatglm2.py
+    @File    ：basic_run_chatglm2.py
     @Author  ：ys
     @Time    ：2023/12/12 12:12
     官方项目：https://github.com/THUDM/ChatGLM2-6B

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 # @Time : 2023/12/13 02:09 
 # @Author : ys 
-# @File : basic_language_model_moe_3d.py
+# @File : basic_run_moe_3d.py
 
 import torch
 from torch import nn

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
     @Project ：quickllm
-    @File    ：basic_multi_query_attention.py
+    @File    ：basic_llm_multi_query_attention.py
     @Author  ：ys
     @Time    ：2023/12/22 21:12
     官方项目：https://github.com/THUDM/ChatGLM2-6B

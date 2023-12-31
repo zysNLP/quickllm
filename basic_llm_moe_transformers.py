@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
     @Project ：quickllm
-    @File    ：basic_language_model_moe_transformers.py
+    @File    ：basic_llm_moe_transformers.py
     @Author  ：ys
     @Time    ：2023/12/21 18:10
     Mixtral-8x7b 模型中的moe部分，以下代码来自官方transformers库
