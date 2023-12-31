@@ -17,7 +17,6 @@ ACT2CLS = {
 ACT2FN = ClassInstantier(ACT2CLS)
 
 
-
 class MixtralConfig:
     r"""
     This is the configuration class to store the configuration of a [`MixtralModel`]. It is used to instantiate an
@@ -229,6 +228,52 @@ class MixtralSparseMoeBlock(nn.Module):
         return final_hidden_states, router_logits
 
 
+def load_balancing_loss_func(gate_logits: torch.Tensor, num_experts: torch.Tensor = None, top_k=2) -> float:
+    r"""
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in Pytorch.
+
+    See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
+    function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between
+    experts is too unbalanced.
+
+    Args:
+        gate_logits (Union[`torch.Tensor`, Tuple[torch.Tensor]):
+            Logits from the `gate`, should be a tuple of tensors. Shape: [batch_size, seqeunce_length, num_experts].
+        num_experts (`int`, *optional*):
+            Number of experts
+
+    Returns:
+        The auxiliary loss.
+    """
+    if gate_logits is None:
+        return 0
+
+    if isinstance(gate_logits, tuple):
+        # cat along the layers?
+        compute_device = gate_logits[0].device
+        gate_logits = torch.cat([gate.to(compute_device) for gate in gate_logits], dim=0)
+
+    routing_weights, selected_experts = torch.topk(gate_logits, top_k, dim=-1)
+    routing_weights = routing_weights.softmax(dim=-1)
+
+    # cast the expert indices to int64, otherwise one-hot encoding will fail
+    if selected_experts.dtype != torch.int64:
+        selected_experts = selected_experts.to(torch.int64)
+
+    if len(selected_experts.shape) == 2:
+        selected_experts = selected_experts.unsqueeze(2)
+
+    expert_mask = torch.nn.functional.one_hot(selected_experts, num_experts)
+
+    # For a given token, determine if it was routed to a given expert.
+    expert_mask = torch.max(expert_mask, axis=-2).values
+
+    # cast to float32 otherwise mean will fail
+    expert_mask = expert_mask.to(torch.float32)
+    tokens_per_group_and_expert = torch.mean(expert_mask, axis=-2)
+
+    router_prob_per_group_and_expert = torch.mean(routing_weights, axis=-1)
+    return torch.mean(tokens_per_group_and_expert * router_prob_per_group_and_expert.unsqueeze(-1)) * (num_experts**2)
 
 
 """附录，index_add_
@@ -239,7 +284,7 @@ class MixtralSparseMoeBlock(nn.Module):
 - `current_hidden_states.to(hidden_states.dtype)`：将`current_hidden_states`转换为与`hidden_states`相同的数据类型，
 并将其作为要添加的源张量。`current_hidden_states`的形状为(61, 4096)。
 
-这段代码的意思是，在`final_hidden_states`这个形状为(284, 4096)的张量中，根据`top_x`提供的索引位置，
+这段代码的意思是，在`final_hidden_states`这个形状为(284, 4096)的全0张量中，根据`top_x`提供的索引位置，
 将`current_hidden_states`的元素加到对应的位置。`current_hidden_states`的每个元素（形状为(4096,)）
 都会被添加到`final_hidden_states`中对应索引的行上。
 
