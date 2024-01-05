@@ -12,14 +12,14 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 ### 最新更新：
 
-- 20240105：🐯feat(quickllm/projects/*):新增基于Neo4j知识图谱的KBQA对话系统项目
-- 20231225：🐯feat(quickllm/layers/moe_by_transformers.py):新增MOE-transformers模块的Loss调试流程
-- 20231225：🐯feat(basic_llm_moe_transformers.py):新增transformers包的Mixtral-8x7B/MOE源代码调试
-- 20231222：🐯feat(quickllm/layers/multi_query_attention.py):添加调试transformers包MQA的方法
-- 20231219：🐯feat(basic_language_model_moe*):MOE新增2维和3维数据的训练过程
-- 20231218：🐯feat(quickllm/clients/vllm.py):添加vllm的api请求模块
-- 20231214：🐯feat(README): 增加Qwen-TensorRT-LLM的链接和说明
-- 20231213：🐯feat(quickllm/clients/triton_client*):添加ChatGLM系列triton服务基础代码
+- 20240105：🐯feat: 新增基于Neo4j知识图谱的KBQA对话系统项目
+- 20231225：🐯feat: 新增MOE-transformers模块的Loss调试流程
+- 20231225：🐯feat: 新增transformers包的Mixtral-8x7B/MOE源代码调试
+- 20231222：🐯feat: 新增调试transformers包MQA的方法
+- 20231219：🐯feat: MOE新增2维和3维数据的训练过程
+- 20231218：🐯feat: 添加vllm的api请求模块
+- 20231214：🐯feat: 增加Qwen-TensorRT-LLM的链接和说明
+- 20231213：🐯feat: 添加ChatGLM系列triton服务基础代码
 
 ### **调试方式!!!：**
 
