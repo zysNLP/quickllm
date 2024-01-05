@@ -1,0 +1,4 @@
+pandas
+jieba
+py2neo
+pyahocorasick
