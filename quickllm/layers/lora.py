@@ -1,39 +1,33 @@
 # -*- coding: utf-8 -*- 
 """
-    @Project ：quickllm 
+    @Project ：quickllm-loc 
     @File    ：lora.py
     @Author  ：ys
-    @Time    ：2023/12/12 15:22
-    TF2实现，暂时作为学习用，无法在项目中直接运行，请留意
+    @Time    ：2024/1/10 15:05 
 """
 
-import tensorflow as tf
-from tensorflow.keras.layers import Layer
+import torch
+from torch import nn
 
 
-class Lora(Layer):
-
-    def __init__(self, r, output_size, alpha, dropout, use_bias=False, name='lora', **kwargs):
-        super().__init__(name=name, **kwargs)
-        self.low = None
-        self.up = None
+class Lora(nn.Module):
+    def __init__(self, r, output_size, alpha, dropout_prob, bias=False, name='lora'):
+        super(Lora, self).__init__()
+        self.name = name
         self.r = r
         self.output_size = output_size
         self.scaling = alpha / r
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        self.use_bias = use_bias
+        self.dropout = nn.Dropout(dropout_prob)
+        self.use_bias = bias
 
-    def build(self, input_shape):
-        self.low = tf.keras.layers.Dense(self.r, kernel_initializer=tf.keras.initializers.he_uniform(),
-                                         use_bias=self.use_bias, name='A')
-        self.up = tf.keras.layers.Dense(self.output_size, kernel_initializer=tf.keras.initializers.zeros(),
-                                        use_bias=self.use_bias, name='B')
-        return super().build(input_shape)
+        # 初始化权重层
+        self.low = nn.Linear(inputs.shape[1], self.r, bias=self.use_bias)
+        self.up = nn.Linear(self.r, self.output_size, bias=self.use_bias)
 
-    def call(self, inputs, training=False, **kwargs):
+    def forward(self, inputs, training=False):
         x = self.low(inputs)
         x = self.up(x)
-        x = self.dropout(x, training=training)
+        if training:
+            x = self.dropout(x)
         x = x * self.scaling
-
         return x
