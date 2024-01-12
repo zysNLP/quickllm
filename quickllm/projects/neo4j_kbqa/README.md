@@ -1,4 +1,4 @@
-## 基于Noe4j的知识图谱搭建医疗知识图谱
+## 基于Noe4j图数据库+LLM意图识别搭建医疗知识图谱
 
 执行步骤：
 
@@ -19,13 +19,22 @@
 pip install -r requirements.txt -i https://pypi.douban.com/simple
 ```
 
-### 3.构建数据入库
+### 3.训练意图和抽取实体
+
+```python
+# 通过训练LLM的意图分类模型或者实体抽取模型
+1.识别用户输入的问题的意图（可借助LLM生成样本、或者直接预测、prompt工程等）
+2.识别用户输入中的关联实体（可借助LLM生成样本、或者直接预测、prompt工程等）
+3.构造问题-query的关联上下文作为索引
+```
+
+### 4.构建数据入库
 
 ```shell
 python build_graph.py
 ```
 
-### 3.测试运行
+### 5.测试运行
 
 ```shell
 python kbqa_test.py
