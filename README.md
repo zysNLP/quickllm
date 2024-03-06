@@ -6,6 +6,10 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 再次强调：强调本地调试、代码跳转、快速掌握LLM！basic_llm\*和basic_run\*分别是调试和运行模式
 
+配套基础课程[《AIGC大模型理论与工业落地实战》](https://edu.csdn.net/course/detail/39082)
+
+配套高级课程[《AIGC大模型高级进阶和工业落地》](https://edu.csdn.net/course/detail/39347)
+
 ```python
 # 下次更新：1.基于PyTorch的Mistral-8x7B和Mixtral-8x7B-Instruct-v0.1的MOE模型微调；2.各类TensorRT-LLM和推理加速的相关工作
 ```
