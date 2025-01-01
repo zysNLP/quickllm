@@ -2,3 +2,4 @@
 **/__pycache__/
 .idea/*
 del_cache.py
+.DS_Store
