@@ -1,0 +1,1 @@
+docker run -d --network host --shm-size=64g --name grpo --gpus all -v /data1/users/yszhang/data1/users/yszhang/projects/learnings:/data/project ollama/ollama:latest
