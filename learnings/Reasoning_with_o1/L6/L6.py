@@ -704,9 +704,9 @@ for i in range(3):
 
 
     # Get the updated routine from the metaprompting assistant
-    temp_routine_json = get_openai_response(o1_messages
-                                            , O1_MODEL
-                                            ,response_format=OUTPUT_SCHEMA)
+    temp_routine_json = get_openai_response(messages=o1_messages,
+                                            model=O1_MODEL,
+                                            response_format=OUTPUT_SCHEMA)
     #temp_routine_str = temp_routine_json.strip("json```").strip("```")
     new_routine = json.loads(temp_routine_json)["final_answer"]
     routines.append(new_routine)
