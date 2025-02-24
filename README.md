@@ -10,7 +10,7 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 ### 最新更新：
 
-- 20250224：🐯feat(quickllm/base_rope*):新增ROPE简易调试代码
+- 20250224：🐯feat(quickllm/base_rope.py):新增ROPE简易调试代码
 - 20250220：🐯feat(quickllm/learnings/MLA/*):新增deepseek-MLA注意力机制调试代码
 - 20250220：🐯feat(quickllm/learnings/tiny_grpo/*):新增deepseek-grpo调试代码
 - 20240105：🐯feat(quickllm/projects/*):新增基于Neo4j知识图谱的KBQA对话系统项目
