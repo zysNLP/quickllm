@@ -10,9 +10,10 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 ### 最新更新：
 
+- 20250225：🐯feat:(learnings/DeepSeek-V3)添加deepseek-V3官方推理代码（可使用本地GPU(大于40G显存)直接调试！）
 - 20250224：🐯feat(quickllm/base_rope.py):新增ROPE简易调试代码
-- 20250220：🐯feat(quickllm/learnings/MLA/*):新增deepseek-MLA注意力机制调试代码
-- 20250220：🐯feat(quickllm/learnings/tiny_grpo/*):新增deepseek-grpo调试代码
+- 20250220：🐯feat(learnings/MLA/*):新增deepseek-MLA注意力机制调试代码
+- 20250220：🐯feat(learnings/tiny_grpo/*):新增deepseek-grpo调试代码
 - 20240105：🐯feat(quickllm/projects/*):新增基于Neo4j知识图谱的KBQA对话系统项目
 - 20231225：🐯feat(quickllm/layers/moe_by_transformers.py):新增MOE-transformers模块的Loss调试流程
 - 20231225：🐯feat(basic_llm_moe_transformers.py):新增transformers包的Mixtral-8x7B/MOE源代码调试
