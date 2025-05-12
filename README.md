@@ -10,7 +10,7 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 ### 最新更新：
 
-- 20250225：🐯feat:(learnings/DeepSeek-V3)添加deepseek-V3官方推理代码（可使用learnings/DeepSeek-V3/inference/model.py脚本在本地GPU(大于40G显存)直接调试！）
+- 20250225：🐯feat:(learnings/DeepSeek-V3)添加deepseek-V3官方推理代码（可使用learnings/DeepSeek-V3-codes/inference/model.py脚本在本地GPU(大于40G显存)直接调试！）
 - 20250224：🐯feat(quickllm/base_rope.py):新增ROPE简易调试代码
 - 20250220：🐯feat(learnings/MLA/*):新增deepseek-MLA注意力机制调试代码
 - 20250220：🐯feat(learnings/tiny_grpo/*):新增deepseek-grpo调试代码
