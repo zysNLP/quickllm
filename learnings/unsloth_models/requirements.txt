@@ -1,0 +1,11 @@
+#python>=3.10
+torch==2.7.0
+transformers==4.51.3
+unsloth==2025.5.2
+trl==0.15.2
+datasets==3.6.0
+fastapi==0.115.12
+uvicorn==0.34.2
+aiohttp==3.9.5
+bitsandbytes==0.45.5
+peft==0.15.2

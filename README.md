@@ -9,16 +9,12 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 配套课程[《AIGC大模型理论与工业落地实战》](https://edu.csdn.net/course/detail/39082)，[relation](https://github.com/zysNLP/base_course/tree/main)
 
 ### 最新更新：
-
+- 20250514：🐯feat:(learnings/unsloth_models)添加《基于unsloth训练与部署实践DeepSeek-R1 法律推理模型》包括训练、推理、部署服务和请求服务）
 - 20250225：🐯feat:(learnings/DeepSeek-V3)添加deepseek-V3官方推理代码（可使用learnings/DeepSeek-V3-codes/inference/model.py脚本在本地GPU(大于40G显存)直接调试！）
 - 20250224：🐯feat(quickllm/base_rope.py):新增ROPE简易调试代码
 - 20250220：🐯feat(learnings/MLA/*):新增deepseek-MLA注意力机制调试代码
 - 20250220：🐯feat(learnings/tiny_grpo/*):新增deepseek-grpo调试代码
-- 20240105：🐯feat(quickllm/projects/*):新增基于Neo4j知识图谱的KBQA对话系统项目
-- 20231225：🐯feat(quickllm/layers/moe_by_transformers.py):新增MOE-transformers模块的Loss调试流程
 - 20231225：🐯feat(basic_llm_moe_transformers.py):新增transformers包的Mixtral-8x7B/MOE源代码调试
-- 20231222：🐯feat(quickllm/layers/multi_query_attention.py):添加调试transformers包MQA的方法
-- 20231219：🐯feat(basic_language_model_moe*):MOE新增2维和3维数据的训练过程
 
 ### **调试方式!!!：**
 
