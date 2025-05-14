@@ -6,10 +6,10 @@
 
 ## 目录结构
 
-- `us.py`：模型微调主脚本，包含数据准备、格式化、LoRA 微调、模型保存等流程。
-- `utest.py`：本地推理与交互测试脚本，支持命令行输入问题并获得模型回答。
-- `server_us.py`：基于 FastAPI 的在线推理服务，支持批量法律问题推理接口。
-- `tool_us.py`：异步 HTTP 客户端工具，支持批量并发调用推理服务，适合压测和多实例部署。
+- `train.py`：模型微调主脚本，包含数据准备、格式化、LoRA 微调、模型保存等流程。
+- `valid.py`：本地推理与交互测试脚本，支持命令行输入问题并获得模型回答。
+- `server.py`：基于 FastAPI 的在线推理服务，支持批量法律问题推理接口。
+- `tool.py`：异步 HTTP 客户端工具，支持批量并发调用推理服务，适合压测和多实例部署。
 - `run.sh`：一键启动多实例推理服务脚本，分别监听不同端口并绑定不同 GPU。
 - `r1`: 模型微调所需要的预训练参数（model_name = "unsloth/DeepSeek-R1-Distill-Qwen-14B"）从魔塔官网下载
 - `DeepSeek-R1-Legal-COT-merged_test/`：训练后模型及分词器保存目录（需训练后生成）。
@@ -32,18 +32,18 @@
 
 ### 1. 模型微调
 
-运行 `us.py`，会自动加载预训练模型、准备样例数据并进行 LoRA 微调，最终模型保存在 `DeepSeek-R1-Legal-COT-merged_test/` 目录。
+运行 `train.py`，会自动加载预训练模型、准备样例数据并进行 LoRA 微调，最终模型保存在 `DeepSeek-R1-Legal-COT-merged_test/` 目录。
 
 ```bash
-python us.py
+python train.py
 ```
 
 ### 2. 本地交互测试
 
-使用 `utest.py` 可在命令行下与模型交互，输入法律问题获得推理结果。
+使用 `valid.py` 可在命令行下与模型交互，输入法律问题获得推理结果。
 
 ```bash
-python utest.py
+python valid.py
 ```
 
 ### 3. 启动推理服务
@@ -58,10 +58,10 @@ bash run.sh
 
 ### 4. 批量推理调用
 
-可通过 `tool_us.py` 脚本异步并发调用多个服务实例，适合批量测试和压测。
+可通过 `tool.py` 脚本异步并发调用多个服务实例，适合批量测试和压测。
 
 ```bash
-python tool_us.py
+python tool.py
 ```
 
 
