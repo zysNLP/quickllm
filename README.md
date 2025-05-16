@@ -9,6 +9,7 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 配套课程[《AIGC大模型理论与工业落地实战》](https://edu.csdn.net/course/detail/39082)，[relation](https://github.com/zysNLP/base_course/tree/main)
 
 ### 最新更新：
+- 20250516：🐯feat:(learnings/qwen25-vl_sft)添加Qwen2.5-VL-Instruct模型训练、推理、部署服务和请求服务
 - 20250514：🐯feat:(learnings/unsloth_models)添加《基于unsloth训练与部署实践DeepSeek-R1 法律推理模型》包括训练、推理、部署服务和请求服务）
 - 20250225：🐯feat:(learnings/DeepSeek-V3)添加deepseek-V3官方推理代码（可使用learnings/DeepSeek-V3-codes/inference/model.py脚本在本地GPU(大于40G显存)直接调试！）
 - 20250224：🐯feat(quickllm/base_rope.py):新增ROPE简易调试代码
