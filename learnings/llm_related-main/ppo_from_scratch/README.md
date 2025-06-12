@@ -1,5 +1,9 @@
 # PPO (Proximal Policy Optimization) 算法详解与调试指南
 
+本文代码参见：[https://github.com/zysNLP/quickllm/tree/main/learnings/llm_related-main](https://github.com/zysNLP/quickllm/tree/main/learnings/llm_related-main)；感谢star。本文内容非常生动形象、但也非常长非常详细，请参照代码逐行耐心查看
+
+本文内容后续配套课程[《AIGC大模型理论与工业落地实战》](https://edu.csdn.net/course/detail/39082)；持续更新中
+
 ## 1. PPO算法简介
 
 近端策略优化（Proximal Policy Optimization, PPO）是OpenAI于2017年提出的一种强化学习算法，属于策略梯度（Policy Gradient）方法。PPO通过限制策略更新的幅度来保证训练的稳定性，是目前RLHF（Reinforcement Learning from Human Feedback）中最常用的算法之一。
@@ -660,7 +664,7 @@ values[0] = [-4.92, -0.66, 4.69, 6.51, 0.41, -1.06, -5.91, -2.74, ...]
 ###### 第4步：计算奖励模型分数 - "文本整体能打多少分？"
 
 **为什么最后才用奖励模型？**
-奖励模型像"外部老师"，只有看到完整文本才能打分，不像价值模型可以中途评估。
+奖励模型“reward_model”像"外部老师"，只有看到完整文本才能打分，不像价值模型可以中途评估。
 
 ```python
 # 把token序列还原成文本
@@ -769,7 +773,7 @@ log_ratio = -0.2891 - (-0.3449) = 0.0558  # 不再是0
 
 ###### 第6步：构建最终奖励 - "综合考虑打分和约束"
 
-**奖励设计哲学**：既要鼓励好的生成（奖励模型分数），又要防止变化过大（KL惩罚）。
+**奖励设计哲学，计算奖励函数“compute_rewards”**：既要鼓励好的生成（奖励模型分数），又要防止变化过大（KL惩罚）。
 
 ```python
 # 每个位置的KL惩罚
@@ -793,7 +797,7 @@ rewards[1] = [-0.002, -0.003, -0.001, -0.002, -0.002, -0.002, 0.298, 0.000]  # "
 
 ###### 第7步：计算优势函数 - "每一步比期望好多少？"
 
-**优势函数的直观含义**：如果价值模型预测能得1分，但实际得了1.5分，那优势就是+0.5。
+**优势函数"get_advantages_and_returns"的直观含义**：如果价值模型预测能得1分，但实际得了1.5分，那优势就是+0.5。
 
 ```python
 # GAE反向计算（从最后往前）
@@ -853,7 +857,7 @@ Experience(
 
 ---
 
-## 🎯 **模型选型与架构设计**
+## 🎯 **训练阶段1-模型选型与架构设计**
 
 ### 🤖 **为什么选择Qwen2.5-0.5B-Instruct作为Actor模型？**
 
@@ -1084,8 +1088,12 @@ ref_model      = "参考标准"  # 防止偏离，保持稳定
 ### 📈 **训练过程可视化**
 
 以下是一次成功的PPO训练过程的TensorBoard可视化结果：
-
-<!-- 在这里插入5张TensorBoard图片 -->
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/abdf376c7285498a8339374231bd5a6a.png)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/6123e846a4ee490a9945a59e79266289.png)
+<![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/6c24e79d2ef7405e9998756a52b37598.png)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/9547b71ee6b04411bf01f3779f9c07cd.png)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/b9f5fc61a7194f4f8a00ee31e8c29ef9.png)
+!--在这里插入5张TensorBoard图片 -->
 *[图片位置预留：kl_after_update, kl_before_update, kl_historical, policy_loss, value_loss]*
 
 ### 🔍 **训练日志分析**
