@@ -387,24 +387,19 @@ def main():
 
             for batch_idx, exp in enumerate(experience_sampler):
                 exp: Experience
-
                 exp = exp.to(device)
-
                 optimizer.zero_grad()
 
                 log_probs = sequences_log_probs(
                     model, sequence_ids=exp.sequences, attention_mask=exp.attention_mask
                 )
-
                 loss, kl = objective(log_probs=log_probs, experience=exp)
 
                 if not loss.isfinite():
                     print(f"Loss not finite, skipping backward, loss={loss}")
                     print(f"experience.advantages={experience.advantages}")
                     continue
-
-
-
+                
                 loss.backward()
                 grad_norm = clip_grad_norm_(model.parameters(), max_norm=max_norm)
                 
