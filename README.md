@@ -2,7 +2,7 @@
 
 LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本地运行和调试*</u>** 的大模型LLM相关的应用
 
-#### **核心功能**： Mixtral-8x7B、MOE、ChatGLM3、LLaMa2、 BaChuan、Qwen-TensorRT等
+#### **核心功能**： PPO、GRPO、Deepseek-V3、MLA、Mixtral-8x7B、MOE、Qwen-TensorRT等
 
 再次强调：强调本地调试、代码跳转、快速掌握LLM！basic_llm\*和basic_run\*分别是调试和运行模式
 
