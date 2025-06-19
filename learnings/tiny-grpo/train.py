@@ -10,12 +10,14 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from transformers import (
     AutoTokenizer,
     PreTrainedTokenizer,
-    LlamaForCausalLM,
+    AutoModelForCausalLM,
     GenerationConfig,
 )
+import pandas as pd
 from loss import approx_kl_divergence, GRPOLoss
 from replay_buffer import ReplayBuffer, Experience, join_experience_batch
 
@@ -25,10 +27,10 @@ def load_model(
     trust_remote_code: bool = False,
     bf16: bool = True,
     device_map=None,
-) -> tuple[LlamaForCausalLM, PreTrainedTokenizer]:
+) -> tuple[AutoModelForCausalLM, PreTrainedTokenizer]:
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     tokenizer.pad_token = tokenizer.eos_token
-    model = LlamaForCausalLM.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         model_name_or_path,
         trust_remote_code=trust_remote_code,
         # attn_implementation="flash_attention_2",
@@ -47,7 +49,7 @@ The assistant first thinks about the reasoning process in the mind and then prov
 
 @torch.no_grad()
 def rollout(
-    model: LlamaForCausalLM,
+    model: AutoModelForCausalLM,
     tokenizer: PreTrainedTokenizer,
     task: str,
     oracle_answer: str,
@@ -151,7 +153,7 @@ def sequence_log_probs_from_logits(
 
 
 def sequences_log_probs(
-    model: LlamaForCausalLM,
+    model: AutoModelForCausalLM,
     sequence_ids: torch.Tensor,
     attention_mask: torch.Tensor,
 ) -> torch.Tensor:
@@ -192,12 +194,38 @@ def read_prompts(
     return rows
 
 
+def read_prompts_from_parquet(
+    file_path: str | Path,
+    max_rows: Optional[int] = None,
+) -> list:
+    """从parquet文件读取数据"""
+    df = pd.read_parquet(file_path)
+    
+    # 转换为list of dict格式，用于兼容原有的数据处理逻辑
+    rows = []
+    for _, row in df.iterrows():
+        # 使用英文原问题和详细答案，保持完整的推理链
+        # 从详细答案中提取最终数字答案用于奖励计算
+        answer_text = row['answer']
+        final_answer = str(row['answer_only'])  # 提取最终数字答案用于奖励匹配
+        
+        data_item = {
+            'question': row['question'],  # 使用英文原问题
+            'answer': final_answer,  # 使用数字答案用于奖励匹配
+            'full_answer': answer_text,  # 保存完整答案用于可能的参考
+            'id': str(len(rows)),  # 生成ID
+        }
+        rows.append(data_item)
+    
+    return rows
+
+
 def main():
     seed = 42
     wandb_project = None  # "tiny_grpo"
-    device_index = 4
-    model_name = "/data1/users/yszhang/data1/users/yszhang/projects/learnings/tiny-grpo/llama_1b"
-    checkpoint_path = Path("./output")
+    device_index = 3
+    model_name = "/data2/users/yszhang/quickllm/models/Qwen2.5-0.5B-Instruct"
+    checkpoint_path = Path("/data2/users/yszhang/quickllm/outputs/tiny_grpo/output")
     checkpoint_interval = 20
     train_batch_size = 16
     lr = 5e-6
@@ -229,12 +257,10 @@ def main():
 
     pad_token_id = tokenizer.eos_token_id
 
-    prompts = read_prompts(
-        "data/math_tasks.jsonl",
-        predicate=lambda x: len(x["question"]) < 128
-        and x["num_terms"] <= 3
-        and x["num_digits"] <= 3,
-        max_rows=64 * 1024,
+    # 使用GSM8K中文数据集
+    gsm8k_path = "/data2/users/yszhang/quickllm/rl/llm_related-main/grpo_from_scratch/datasets/gsm8k_chinese/data/train-00000-of-00001.parquet"
+    prompts = read_prompts_from_parquet(
+        gsm8k_path,
     )
     print(f"found {len(prompts)} matching prompts")
     prompt_loader = DataLoader(
@@ -252,6 +278,23 @@ def main():
         wandb.init(mode="disabled")
     else:
         wandb.init(project=wandb_project)
+    
+    # Initialize TensorBoard writer
+    writer = SummaryWriter(f'./runs/grpo_train')
+    
+    # Initialize loss history tracking (essential metrics only)
+    loss_history = {
+        "total_loss": [],
+        "kl_divergence": [],
+        "grad_norm": [],
+        "returns": [],
+        "success_rate": []
+    }
+    
+    total_steps = len(prompt_loader)
+    print(f"Total training steps: {total_steps}")
+    print(f"Each step processes {rollouts_per_step} questions with {group_size} rollouts each")
+    print(f"Training batch size: {train_batch_size}, epochs per step: {epochs_per_step}")
 
     for k, prompt_batch in enumerate(prompt_loader):
         rollout_returns = []
@@ -260,9 +303,10 @@ def main():
 
         questions = prompt_batch["question"]
         answers = prompt_batch["answer"]
+        full_answers = prompt_batch["full_answer"]
 
         with torch.no_grad():
-            for q, a in zip(questions, answers):
+            for q, a, full_a in zip(questions, answers, full_answers):
                 sequence_ids, returns, action_mask, completions = rollout(
                     model,
                     tokenizer,
@@ -275,9 +319,13 @@ def main():
                     device=device,
                 )
 
-                print(
-                    f"rollout q='{q}', a='{a}', returns={returns.sum().item():.2f}, replay_buffer_size={len(replay_buffer)}, sequence_ids={sequence_ids.shape}"
-                )
+                print(f"===:rollout q='{q}', a='{a}', returns={returns.sum().item():.2f}, replay_buffer_size={len(replay_buffer)}, sequence_ids={sequence_ids.shape}")
+                
+                # 对比标准答案和模型top1答案
+                best_idx = returns.argmax().item()  # 找到奖励最高的答案
+                print(f"===:标准答案: {full_a[:200]}..." if len(full_a) > 200 else f"标准答案: {full_a}")
+                print(f"===:模型top1: {completions[best_idx][:200]}..." if len(completions[best_idx]) > 200 else f"模型top1: {completions[best_idx]}")
+                print("--------------------------------")
                 rollout_returns.append(returns.cpu())
 
                 advantages = group_advantages(returns)
@@ -315,6 +363,16 @@ def main():
         episode_return_sum = torch.stack(rollout_returns).sum()
         print(f"returns of step {k}: {episode_return_sum:.4f}")
         wandb.log({"returns": episode_return_sum})
+        
+        # Log essential rollout metrics to TensorBoard
+        writer.add_scalar("rollout/returns", episode_return_sum, k)
+        all_returns = torch.cat(rollout_returns, dim=0)
+        success_rate = (all_returns > 0.9).float().mean()
+        writer.add_scalar("rollout/success_rate", success_rate, k)
+        
+        # Store essential rollout metrics in history
+        loss_history["returns"].append(episode_return_sum.item())
+        loss_history["success_rate"].append(success_rate.item())
 
         experience_sampler = DataLoader(
             replay_buffer,
@@ -327,7 +385,7 @@ def main():
         for step_epoch in range(epochs_per_step):
             model.train()
 
-            for exp in experience_sampler:
+            for batch_idx, exp in enumerate(experience_sampler):
                 exp: Experience
 
                 exp = exp.to(device)
@@ -345,10 +403,25 @@ def main():
                     print(f"experience.advantages={experience.advantages}")
                     continue
 
+
+
                 loss.backward()
                 grad_norm = clip_grad_norm_(model.parameters(), max_norm=max_norm)
-                print(f"{step_epoch}: kl={kl: .4f}, grad_norm={grad_norm: .4f}")
-                wandb.log({"kl": kl, "grad_norm": grad_norm})
+                
+                # Simplified logging - only essential metrics
+                print(f"{step_epoch}: loss={loss:.4f}, kl={kl:.4f}, grad_norm={grad_norm:.4f}")
+                wandb.log({"loss": loss, "kl": kl, "grad_norm": grad_norm})
+                
+                # Log essential training metrics to TensorBoard
+                global_step = k * epochs_per_step * len(experience_sampler) + step_epoch * len(experience_sampler) + batch_idx
+                writer.add_scalar("train/loss", loss, global_step)
+                writer.add_scalar("train/kl_divergence", kl, global_step)
+                writer.add_scalar("train/grad_norm", grad_norm, global_step)
+                
+                # Store essential training metrics in history
+                loss_history["total_loss"].append(loss.item())
+                loss_history["kl_divergence"].append(kl.item())
+                loss_history["grad_norm"].append(grad_norm.item())
 
                 optimizer.step()
 
@@ -361,6 +434,25 @@ def main():
 
     if checkpoint_path is not None:
         model.save_pretrained(checkpoint_path / f"step_{k}")
+    
+    # Save loss history to JSON file
+    import json
+    history_path = checkpoint_path / "loss_history.json"
+    with open(history_path, 'w') as f:
+        json.dump(loss_history, f, indent=2)
+    print(f"Loss history saved to: {history_path}")
+    
+    # Close TensorBoard writer
+    writer.close()
+    print("Training completed!")
+    
+    # Print final statistics
+    if len(loss_history["total_loss"]) > 0:
+        print("\n=== Final Training Statistics ===")
+        print(f"Final loss: {loss_history['total_loss'][-1]:.4f}")
+        print(f"Final success rate: {loss_history['success_rate'][-1]:.2%}")
+        print(f"Average return: {sum(loss_history['returns'])/len(loss_history['returns']):.2f}")
+        print("="*40)
 
 
 if __name__ == "__main__":

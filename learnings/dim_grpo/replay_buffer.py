@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 
 def zero_pad_sequences(
@@ -27,6 +28,9 @@ class Experience:
     advantages: Optional[torch.Tensor]
     attention_mask: Optional[torch.Tensor]
     action_mask: torch.Tensor
+    pixel_values: torch.Tensor
+    tgt_sizes: torch.Tensor
+    image_bound: list
     kl: Optional[torch.Tensor] = None
 
     def to(self, device: torch.device) -> "Experience":
@@ -50,13 +54,25 @@ def split_experience_batch(experience: Experience) -> list[Experience]:
         "advantages",
         "attention_mask",
         "action_mask",
+        "pixel_values",
+        "tgt_sizes",
+        "image_bound",
     )
     for key in keys:
         value = getattr(experience, key)
         if value is None:
             vals = [None] * batch_size
+        elif key == "image_bound":
+            # image_bound 是一个列表，不需要 unbind
+            vals = value
         else:
-            vals = torch.unbind(value)
+            # 检查是否是标量张量
+            if isinstance(value, torch.Tensor) and value.numel() == 1:
+                # 如果是标量张量，复制给所有batch
+                vals = [value.clone() for _ in range(batch_size)]
+            else:
+                # 否则使用 unbind
+                vals = torch.unbind(value)
         assert batch_size == len(vals)
         for i, v in enumerate(vals):
             batch_data[i][key] = v
@@ -74,11 +90,18 @@ def join_experience_batch(items: list[Experience]) -> Experience:
         "advantages",
         "attention_mask",
         "action_mask",
+        "pixel_values",
+        "tgt_sizes",
+        "image_bound",
     )
     for key in keys:
         vals = [getattr(item, key) for item in items]
         if all(v is not None for v in vals):
-            data = zero_pad_sequences(vals, "left")
+            if key == "image_bound":
+                # image_bound 是一个列表，不需要 zero_pad_sequences
+                data = vals
+            else:
+                data = zero_pad_sequences(vals, "left")
         else:
             data = None
         batch_data[key] = data
@@ -106,3 +129,10 @@ class ReplayBuffer:
 
     def __getitem__(self, idx: int) -> Experience:
         return self.items[idx]
+
+    def sample(self, batch_size: int) -> list[Experience]:
+        """从缓冲区中随机采样指定数量的经验。"""
+        if len(self.items) < batch_size:
+            return self.items
+        indices = np.random.choice(len(self.items), batch_size, replace=False)
+        return [self.items[i] for i in indices]
