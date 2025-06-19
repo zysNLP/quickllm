@@ -20,6 +20,8 @@ LLM学习资源库。使用pytorch和部分Tensorflow2实现，可以 **<u>*本�
 
 ## 二、GRPO相关工作
 
+![img.png](docs/img.png)
+
 ### 2.1 核心训练流程
 
 #### 2.1.1 Rollout阶段

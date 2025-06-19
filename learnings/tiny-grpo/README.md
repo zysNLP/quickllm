@@ -362,6 +362,8 @@ advantages = (returns - returns.mean()) / returns.std()
 
 ### 6.2 训练效果对比
 
+![img.png](img.png)
+
 #### 🎯 **训练前 vs 训练后**
 
 **训练前模型表现：**
