@@ -329,7 +329,7 @@ if __name__ == "__main__":
     
     # 模型参数设置
     d_model = 1024
-    num_heads = 46
+    num_heads = 64
     
     v_head_dim = 32
     kv_lora_rank = 128
