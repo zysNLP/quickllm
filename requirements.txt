@@ -7,4 +7,5 @@ transformers
 peft
 bert4keras
 scikit-learn
+loguru
 
