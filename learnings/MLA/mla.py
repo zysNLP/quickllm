@@ -226,8 +226,9 @@ class Attention(nn.Module):
 
         d_model = config.d_model
         self.num_heads = config.num_heads
-        self.head_dim = config.d_model // config.num_heads
-        self.num_kv_heads = config.num_heads if config.num_kv_heads == 0 else config.num_kv_heads
+        # 使用自定义的head_dim而不是计算出来的
+        self.head_dim = getattr(config, 'mha_head_dim', config.d_model // config.num_heads)
+        self.num_kv_heads = config.num_heads if config.num_kv_heads is None else config.num_kv_heads
         assert self.num_heads % self.num_kv_heads == 0
         self.num_queries_per_kv = self.num_heads // self.num_kv_heads
 
@@ -235,7 +236,8 @@ class Attention(nn.Module):
         self.key = nn.Linear(d_model, self.head_dim * self.num_kv_heads, config.bias)
         self.query = nn.Linear(d_model, self.head_dim * self.num_heads, config.bias)
         self.value = nn.Linear(d_model, self.head_dim * self.num_kv_heads, config.bias)
-        self.proj = nn.Linear(d_model, d_model, config.bias)
+        # 输出投影层需要匹配实际的头维度
+        self.proj = nn.Linear(self.head_dim * self.num_heads, d_model, config.bias)
 
         # Dropout层
         self.attn_dropout = nn.Dropout(config.dropout)
@@ -308,7 +310,7 @@ class Attention(nn.Module):
 
         
         # 恢复时间维度作为批次维度并连接头
-        output = output.transpose(1, 2).contiguous().view(batch, seq_len, d_model)
+        output = output.transpose(1, 2).contiguous().view(batch, seq_len, self.head_dim * self.num_heads)
 
         # 最终投影到残差流
         output = self.proj(output)
@@ -331,6 +333,12 @@ if __name__ == "__main__":
     d_model = 1024
     num_heads = 64
     
+    # 调整MHA的头维度以匹配MLA
+    # MLA的总头维度 = rope_head_dim + nope_head_dim = 64 + 32 = 96
+    # 所以MHA的head_dim应该设置为96
+    mha_head_dim = 96  # 与MLA的总头维度匹配
+    
+    # 恢复MLA的原始参数
     v_head_dim = 32
     kv_lora_rank = 128
     q_lora_rank = 3 * kv_lora_rank  # 查询秩是键值秩的3倍
@@ -349,24 +357,35 @@ if __name__ == "__main__":
         rope_head_dim=rope_head_dim,
         kv_lora_rank=kv_lora_rank,
         q_lora_rank=q_lora_rank,
+        mha_head_dim=mha_head_dim,  # 添加MHA的头维度配置
     )
 
     # 初始化MLA模型
     mla = MultiHeadLatentAttention(config)
+    mha = Attention(config)
     x = torch.randn(2, 10, d_model)  # 创建测试输入
     
     # 预计算旋转位置编码频率
     # freqs_cis: 这是旋转位置编码(RoPE)的核心组件
     # 它包含了位置信息的复数表示，使得模型能够理解序列中token的相对位置
     # 这些频率是预计算的，避免在每次前向传播时重复计算
-    freqs_cis = precompute_freqs_cis(config.rope_head_dim, config.seq_len)
+    
+    # 为MLA模型预计算（使用rope_head_dim）
+    freqs_cis_mla = precompute_freqs_cis(config.rope_head_dim, config.seq_len)
+    
+    # 为MHA模型预计算（使用自定义的head_dim）
+    mha_head_dim = getattr(config, 'mha_head_dim', config.d_model // config.num_heads)
+    freqs_cis_mha = precompute_freqs_cis(mha_head_dim, config.seq_len)
     
     # mla = torch.compile(mla)  # 可选：使用torch.compile优化
     
     # 打印模型信息
-    print(f"Model Size: {sum(p.numel() for p in mla.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
-    
+    print(f"Model MLA Size: {sum(p.numel() for p in mla.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
+    print(f"Model MHA Size: {sum(p.numel() for p in mha.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
+
     # 运行前向传播
-    output = mla(x, None, freqs_cis)
-    print(output.shape)
+    output_mla = mla(x, None, freqs_cis_mla)
+    output_mha = mha(x, None, freqs_cis_mha)
+    print(output_mla.shape)
+    print(output_mha.shape)
     
