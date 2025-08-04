@@ -245,6 +245,7 @@ class Attention(nn.Module):
 
         # 检查是否支持Flash Attention
         self.flash_attn = hasattr(torch.nn.functional, "scaled_dot_product_attention")
+        # self.flash_attn = False
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor, freqs_cis) -> torch.Tensor:
         """
@@ -302,7 +303,9 @@ class Attention(nn.Module):
         else:
             # 标准注意力计算
             attn_mtx = torch.matmul(q, k.transpose(2, 3)) / math.sqrt(self.head_dim)
-            attn_mtx = attn_mtx + mask[:, :, :seq_len, :seq_len]
+            # 处理mask为None的情况
+            if mask is not None:
+                attn_mtx = attn_mtx + mask[:, :, :seq_len, :seq_len]
             attn_mtx = F.softmax(attn_mtx.float(), dim=-1).type_as(k)
             attn_mtx = self.attn_dropout(attn_mtx)
 
