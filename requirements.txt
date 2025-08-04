@@ -1,11 +1,10 @@
-torch==2.2.2
+torch
 torchvision
-torchaudio
-nltk>=3.8.1
+nlt
 jieba
 tqdm
-peft>=0.7.0
-transformers>=4.32.0
+transformers
+peft
 bert4keras
 scikit-learn
 
