@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Parameter Calculator</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background-color: #E8E4E1;
+            color: #4A4A4A;
+            line-height: 1.6;
+        }
+
+        h1, h2 {
+            color: #5C5552;
+        }
+
+        .input-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            background: #F5F2F0;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            width: 100%;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #6B6461;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"] {
+            width: 120px;
+            flex-shrink: 0;
+            padding: 0.5rem;
+            border: 1px solid #DDD;
+            border-radius: 6px;
+            background: white;
+            color: #4A4A4A;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #9A8F8A;
+            box-shadow: 0 0 0 2px rgba(154, 143, 138, 0.2);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #DDD;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #9A8F8A;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s ease-in-out;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #847571;
+            transform: scale(1.1);
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        .results {
+            background: #F5F2F0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .results p {
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .results span {
+            font-weight: 500;
+            color: #847571;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            width: 100%;
+            padding: 0.5rem 0;
+        }
+
+        .input-wrapper input[type="number"] {
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .input-wrapper input[type="range"] {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+
+        .input-wrapper input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #9A8F8A;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-wrapper input[type="range"]::-webkit-slider-thumb:hover {
+            background: #847571;
+            transform: scale(1.1);
+        }
+    </style>
+    <script>
+        function calculateParameters() {
+            const d_model = parseInt(document.getElementById('d_model').value);
+            const num_heads = parseInt(document.getElementById('num_heads').value);
+            const v_head_dim = parseInt(document.getElementById('v_head_dim').value);
+            const kv_lora_rank = parseInt(document.getElementById('kv_lora_rank').value);
+            const q_lora_rank = 3 * kv_lora_rank;
+            const rope_head_dim = parseInt(document.getElementById('rope_head_dim').value);
+            const nope_head_dim = parseInt(document.getElementById('nope_head_dim').value);
+
+            const value_dim = num_heads * v_head_dim;
+            const nope_dim = num_heads * nope_head_dim;
+            const rope_dim = num_heads * rope_head_dim;
+
+            const compress_q_linear = d_model * q_lora_rank;
+            const decompress_q_nope = q_lora_rank * nope_dim;
+            const decompress_q_rope = q_lora_rank * rope_dim;
+
+            const compress_kv_linear = d_model * kv_lora_rank;
+            const decompress_k_nope = kv_lora_rank * nope_dim;
+            const decompress_v_linear = kv_lora_rank * value_dim;
+
+            const k_rope_linear = d_model * rope_head_dim;
+            const proj_final = value_dim * d_model;
+
+            const total_parameters_corrected = compress_q_linear +
+                decompress_q_nope +
+                decompress_q_rope +
+                compress_kv_linear +
+                decompress_k_nope +
+                decompress_v_linear +
+                k_rope_linear +
+                proj_final;
+
+            const total_parameters_corrected_in_millions = total_parameters_corrected / 1_000_000;
+
+            // Calculate MLA KV cache size
+            const mla_kv_cache_size = kv_lora_rank + rope_head_dim;
+
+            // Format the number with K, M, or B suffix
+            let formatted_parameters;
+            if (total_parameters_corrected >= 1_000_000_000) {
+                formatted_parameters = (total_parameters_corrected / 1_000_000_000).toFixed(4) + 'B';
+            } else if (total_parameters_corrected >= 1_000_000) {
+                formatted_parameters = (total_parameters_corrected / 1_000_000).toFixed(4) + 'M';
+            } else if (total_parameters_corrected >= 1_000) {
+                formatted_parameters = (total_parameters_corrected / 1_000).toFixed(4) + 'K';
+            } else {
+                formatted_parameters = Math.round(total_parameters_corrected).toString();
+            }
+
+            // Format KV cache size with K, M, B suffix
+            let formatted_cache_size;
+            if (mla_kv_cache_size >= 1_000_000_000) {
+                formatted_cache_size = (mla_kv_cache_size / 1_000_000_000).toFixed(4) + 'B';
+            } else if (mla_kv_cache_size >= 1_000_000) {
+                formatted_cache_size = (mla_kv_cache_size / 1_000_000).toFixed(4) + 'M';
+            } else if (mla_kv_cache_size >= 1_000) {
+                formatted_cache_size = (mla_kv_cache_size / 1_000).toFixed(4) + 'K';
+            } else {
+                formatted_cache_size = Math.round(mla_kv_cache_size).toString();
+            }
+
+            // Calculate MHA parameters and cache size
+            const mha_parameters = d_model * d_model * 4;
+            const mha_cache_size = d_model * 2;
+
+            // Format MHA parameters
+            let formatted_mha_parameters;
+            if (mha_parameters >= 1_000_000_000) {
+                formatted_mha_parameters = (mha_parameters / 1_000_000_000).toFixed(4) + 'B';
+            } else if (mha_parameters >= 1_000_000) {
+                formatted_mha_parameters = (mha_parameters / 1_000_000).toFixed(4) + 'M';
+            } else if (mha_parameters >= 1_000) {
+                formatted_mha_parameters = (mha_parameters / 1_000).toFixed(4) + 'K';
+            } else {
+                formatted_mha_parameters = Math.round(mha_parameters).toString();
+            }
+
+            // Format MHA cache size
+            let formatted_mha_cache_size;
+            if (mha_cache_size >= 1_000_000_000) {
+                formatted_mha_cache_size = (mha_cache_size / 1_000_000_000).toFixed(4) + 'B';
+            } else if (mha_cache_size >= 1_000_000) {
+                formatted_mha_cache_size = (mha_cache_size / 1_000_000).toFixed(4) + 'M';
+            } else if (mha_cache_size >= 1_000) {
+                formatted_mha_cache_size = (mha_cache_size / 1_000).toFixed(4) + 'K';
+            } else {
+                formatted_mha_cache_size = Math.round(mha_cache_size).toString();
+            }
+
+            // Calculate cache size reduction percentage
+            const cache_reduction = ((mha_cache_size - mla_kv_cache_size) / mha_cache_size * 100).toFixed(2);
+
+            document.getElementById('total_parameters_millions').textContent = formatted_parameters;
+            document.getElementById('mla_kv_cache_size').textContent = formatted_cache_size;
+            document.getElementById('mha_parameters').textContent = formatted_mha_parameters;
+            document.getElementById('mha_cache_size').textContent = formatted_mha_cache_size;
+            document.getElementById('cache_reduction').textContent = cache_reduction + '%';
+            document.getElementById('q_lora_rank_display').textContent = q_lora_rank;
+
+            // Update q_lora_rank slider
+            document.getElementById('q_lora_rank_slider').value = q_lora_rank;
+            document.getElementById('q_lora_rank_slider').nextElementSibling.value = q_lora_rank;
+        }
+    </script>
+</head>
+<body>
+    <h1>Multi Head Latent Attention (MLA) Calculator</h1>
+    
+    <div class="results">
+        <h2>MLA</h2>
+        <p>Parameters <span id="total_parameters_millions">0.00</span></p>
+        <p>MLA KV Cache Size (per token) <span id="mla_kv_cache_size">0</span></p>
+        <p>Cache Size Reduction <span id="cache_reduction">0%</span></p>
+        
+        <h2>MHA</h2>
+        <p>Parameters <span id="mha_parameters">0.00</span></p>
+        <p>MHA KV Cache Size (per token) <span id="mha_cache_size">0</span></p>
+    </div>
+
+    <h2>Parameters</h2>
+    <div class="input-grid">
+        <div class="input-group"> 
+            <label for="d_model">d_model</label>
+            <div class="input-wrapper">
+                <input type="range" min="256" max="8192" value="1024" step="128" 
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="d_model" value="1024" min="256" max="8192" step="128"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="num_heads">num_heads</label>
+            <div class="input-wrapper">
+                <input type="range" min="1" max="256" value="70" step="1"
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="num_heads" value="70" min="1" max="256"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="v_head_dim">v_head_dim</label>
+            <div class="input-wrapper">
+                <input type="range" min="8" max="256" value="32" step="8"
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="v_head_dim" value="32" min="8" max="256" step="8"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="kv_lora_rank">kv_lora_rank</label>
+            <div class="input-wrapper">
+                <input type="range" min="16" max="512" value="64" step="16"
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="kv_lora_rank" value="64" min="16" max="512" step="16"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="q_lora_rank_slider">q_lora_rank (3× kv_lora_rank)</label>
+            <div class="input-wrapper">
+                <input type="range" id="q_lora_rank_slider" disabled
+                       min="48" max="1536" value="192" step="48">
+                <input type="number" value="192" disabled>
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="rope_head_dim">rope_head_dim</label>
+            <div class="input-wrapper">
+                <input type="range" min="16" max="512" value="64" step="16"
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="rope_head_dim" value="64" min="16" max="512" step="16"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="nope_head_dim">nope_head_dim</label>
+            <div class="input-wrapper">
+                <input type="range" min="8" max="256" value="32" step="8"
+                       oninput="this.nextElementSibling.value=this.value; calculateParameters()">
+                <input type="number" id="nope_head_dim" value="32" min="8" max="256" step="8"
+                       oninput="this.previousElementSibling.value=this.value; calculateParameters()">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial calculation on page load
+        calculateParameters();
+    </script>
+</body>
+</html>

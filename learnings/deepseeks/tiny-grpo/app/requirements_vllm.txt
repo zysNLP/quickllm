@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+transformers>=4.37.0
+vllm>=0.7.2
+mcp
+torch
+logging 

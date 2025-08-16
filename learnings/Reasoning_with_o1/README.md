@@ -1,1 +1,0 @@
-# SC-OpenAI-o1-C4-platform

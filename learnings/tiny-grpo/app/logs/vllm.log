@@ -1,41 +1,0 @@
-INFO 06-16 15:29:21 [__init__.py:244] Automatically detected platform cuda.
-2025-06-16 15:29:24,870 [INFO] Successfully loaded processor from /data2/users/yszhang/quickllm/learnings/tiny-grpo/output/step_232
-INFO 06-16 15:29:32 [config.py:823] This model supports multiple tasks: {'generate', 'reward', 'classify', 'embed', 'score'}. Defaulting to 'generate'.
-INFO 06-16 15:29:32 [config.py:2195] Chunked prefill is enabled with max_num_batched_tokens=8192.
-INFO 06-16 15:29:33 [core.py:455] Waiting for init message from front-end.
-INFO 06-16 15:29:33 [core.py:70] Initializing a V1 LLM engine (v0.9.1) with config: model='/data2/users/yszhang/quickllm/learnings/tiny-grpo/output/step_232', speculative_config=None, tokenizer='/data2/users/yszhang/quickllm/learnings/tiny-grpo/output/step_232', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, override_neuron_config={}, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, kv_cache_dtype=auto,  device_config=cuda, decoding_config=DecodingConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_backend=''), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None), seed=0, served_model_name=/data2/users/yszhang/quickllm/learnings/tiny-grpo/output/step_232, num_scheduler_steps=1, multi_step_stream_outputs=True, enable_prefix_caching=True, chunked_prefill_enabled=True, use_async_output_proc=True, pooler_config=None, compilation_config={"level":3,"debug_dump_path":"","cache_dir":"","backend":"","custom_ops":["none"],"splitting_ops":["vllm.unified_attention","vllm.unified_attention_with_output"],"use_inductor":true,"compile_sizes":[],"inductor_compile_config":{"enable_auto_functionalized_v2":false},"inductor_passes":{},"use_cudagraph":true,"cudagraph_num_of_warmups":1,"cudagraph_capture_sizes":[512,504,496,488,480,472,464,456,448,440,432,424,416,408,400,392,384,376,368,360,352,344,336,328,320,312,304,296,288,280,272,264,256,248,240,232,224,216,208,200,192,184,176,168,160,152,144,136,128,120,112,104,96,88,80,72,64,56,48,40,32,24,16,8,4,2,1],"cudagraph_copy_inputs":false,"full_cuda_graph":false,"max_capture_size":512,"local_cache_dir":null}
-WARNING 06-16 15:29:34 [utils.py:2737] Methods determine_num_available_blocks,device_config,get_cache_block_size_bytes,initialize_cache not implemented in <vllm.v1.worker.gpu_worker.Worker object at 0x7f745680ba90>
-INFO 06-16 15:29:34 [parallel_state.py:1065] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, TP rank 0, EP rank 0
-WARNING 06-16 15:29:34 [topk_topp_sampler.py:59] FlashInfer is not available. Falling back to the PyTorch-native implementation of top-p & top-k sampling. For the best performance, please install FlashInfer.
-INFO 06-16 15:29:34 [gpu_model_runner.py:1595] Starting to load model /data2/users/yszhang/quickllm/learnings/tiny-grpo/output/step_232...
-INFO 06-16 15:29:34 [gpu_model_runner.py:1600] Loading model from scratch...
-INFO 06-16 15:29:34 [cuda.py:252] Using Flash Attention backend on V1 engine.
-Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
-Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  6.08it/s]
-Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  6.07it/s]
-
-INFO 06-16 15:29:35 [default_loader.py:272] Loading weights took 0.19 seconds
-INFO 06-16 15:29:35 [gpu_model_runner.py:1624] Model loading took 0.9269 GiB and 0.347293 seconds
-INFO 06-16 15:29:40 [backends.py:462] Using cache directory: /root/.cache/vllm/torch_compile_cache/5870acb090/rank_0_0 for vLLM's torch.compile
-INFO 06-16 15:29:40 [backends.py:472] Dynamo bytecode transform time: 4.87 s
-INFO 06-16 15:29:44 [backends.py:135] Directly load the compiled graph(s) for shape None from the cache, took 3.195 s
-INFO 06-16 15:29:44 [monitor.py:34] torch.compile takes 4.87 s in total
-INFO 06-16 15:29:45 [gpu_worker.py:227] Available KV cache memory: 33.25 GiB
-INFO 06-16 15:29:45 [kv_cache_utils.py:715] GPU KV cache size: 2,905,264 tokens
-INFO 06-16 15:29:45 [kv_cache_utils.py:719] Maximum concurrency for 32,768 tokens per request: 88.66x
-INFO 06-16 15:30:01 [gpu_model_runner.py:2048] Graph capturing finished in 16 secs, took 1.26 GiB
-INFO 06-16 15:30:01 [core.py:171] init engine (profile, create kv cache, warmup model) took 26.35 seconds
-INFO:     Started server process [2286685]
-INFO:     Waiting for application startup.
-2025-06-16 15:30:02,322 [INFO] StreamableHTTP session manager started
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:16021 (Press CTRL+C to quit)
-Adding requests:   0%|          | 0/1 [00:00<?, ?it/s]Adding requests: 100%|██████████| 1/1 [00:00<00:00, 96.37it/s]
-Processed prompts:   0%|          | 0/1 [00:00<?, ?it/s, est. speed input: 0.00 toks/s, output: 0.00 toks/s]Processed prompts: 100%|██████████| 1/1 [00:00<00:00,  3.53it/s, est. speed input: 479.57 toks/s, output: 292.66 toks/s]Processed prompts: 100%|██████████| 1/1 [00:00<00:00,  3.52it/s, est. speed input: 479.57 toks/s, output: 292.66 toks/s]
-2025-06-16 15:38:38,645 [INFO] reasoning: 
-In April, Natalia sold clips to 48 friends.
-In May, she sold half as many clips as in April, so she sold 48/2 = 24 clips.
-So, in total, Natalia sold 48 + 24 = 72 clips in April and May.
-Therefore, the answer is 72.
-<answer>72</answer>
-INFO:     127.0.0.1:43276 - "POST /solve_question HTTP/1.1" 200 OK
