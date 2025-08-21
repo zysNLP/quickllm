@@ -54,7 +54,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.utils.import_utils import is_torch_fx_available
-from .configuration_deepseek import DeepseekV3Config
+from configuration_deepseek import DeepseekV3Config
 import torch.distributed as dist
 import numpy as np
 
@@ -105,7 +105,8 @@ class DeepseekV3RMSNorm(nn.Module):
         hidden_states = hidden_states.to(torch.float32)
         variance = hidden_states.pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-        return self.weight * hidden_states.to(input_dtype)
+        output_hidden_states = self.weight * hidden_states.to(input_dtype)
+        return output_hidden_states
 
 
 ALL_LAYERNORM_LAYERS.append(DeepseekV3RMSNorm)
@@ -1571,17 +1572,17 @@ class DeepseekV3ForCausalLM(DeepseekV3PreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, DeepseekV3ForCausalLM
-
-        >>> model = DeepseekV3ForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
-        >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
-
-        >>> prompt = "Hey, are you conscious? Can you talk to me?"
-        >>> inputs = tokenizer(prompt, return_tensors="pt")
-
-        >>> # Generate
-        >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
-        >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        # >>> from transformers import AutoTokenizer, DeepseekV3ForCausalLM
+        #
+        # >>> model = DeepseekV3ForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+        # >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+        #
+        # >>> prompt = "Hey, are you conscious? Can you talk to me?"
+        # >>> inputs = tokenizer(prompt, return_tensors="pt")
+        #
+        # >>> # Generate
+        # >>> generate_ids = model.generate(inputs.input_ids, max_length=30)
+        # >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
         output_attentions = (
@@ -1847,3 +1848,79 @@ class DeepseekV3ForSequenceClassification(DeepseekV3PreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+
+
+import torch
+import torch.nn as nn
+from typing import Optional, Tuple
+
+if __name__ == "__main__":
+    # 使用DeepseekV3Config类
+    config = DeepseekV3Config()
+
+    # 调整配置参数以适应你的输入
+    config.hidden_size = 1024  # 与输入维度匹配
+    config.num_attention_heads = 64  # 合理设置头数
+    config.kv_lora_rank = 128  # 适中的低秩维度
+    config.q_lora_rank = config.kv_lora_rank * 3  # 适中的低秩维度
+    config.qk_rope_head_dim = 64  # 保持与原始配置一致
+    config.qk_nope_head_dim = 32
+    config.v_head_dim = 32  # 调整以适应hidden_size
+
+    # 计算合理的qk_nope_head_dim
+    # 总头维度 = hidden_size / num_attention_heads = 1024 / 16 = 64
+    # 所以qk_nope_head_dim + qk_rope_head_dim + (v_head_dim - qk_rope_head_dim) 应该等于64
+    # 简化计算：qk_nope_head_dim + v_head_dim = 64
+
+
+    # 创建注意力层实例
+    attention_layer = DeepseekV3Attention(config, layer_idx=0)
+
+    # 创建输入张量
+    batch_size, seq_len, hidden_size = 2, 10, 1024
+    x = torch.randn(batch_size, seq_len, hidden_size)
+
+    # 创建position_ids
+    position_ids = torch.arange(seq_len).unsqueeze(0).expand(batch_size, seq_len)
+
+    # 创建正确的attention_mask形状 (batch_size, 1, query_length, key_length)
+    attention_mask = torch.ones(batch_size, 1, seq_len, seq_len)
+
+    print("Configuration:")
+    print(f"  hidden_size: {config.hidden_size}")
+    print(f"  num_attention_heads: {config.num_attention_heads}")
+    print(f"  q_lora_rank: {config.q_lora_rank}")
+    print(f"  kv_lora_rank: {config.kv_lora_rank}")
+    print(f"  qk_rope_head_dim: {config.qk_rope_head_dim}")
+    print(f"  v_head_dim: {config.v_head_dim}")
+    print(f"  qk_nope_head_dim: {config.qk_nope_head_dim}")
+
+    # 调用forward方法
+    output, attn_weights, past_key_value = attention_layer(
+        hidden_states=x,
+        attention_mask=attention_mask,
+        position_ids=position_ids,
+        past_key_value=None,
+        output_attentions=False,
+        use_cache=False
+    )
+    print(f"Model MHA Size: {sum(p.numel() for p in attention_layer.parameters())/1e6}M params")
+
+    print(f"\nInput shape: {x.shape}")
+    print(f"Output shape: {output.shape}")
+    if attn_weights is not None:
+        print(f"Attention weights shape: {attn_weights.shape}")
+    if past_key_value is not None:
+        print(f"Past key shape: {past_key_value[0].shape if past_key_value else 'None'}")
+        print(f"Past value shape: {past_key_value[1].shape if past_key_value else 'None'}")
+
+    # 验证输出形状是否正确
+    assert output.shape == x.shape, f"Output shape {output.shape} doesn't match input shape {x.shape}"
+    print("\nTest passed! Output shape matches input shape.")
+
+    # 打印一些中间变量的形状，帮助理解MLA的工作原理
+    print("\nMLA implementation details:")
+    print(
+        f"  Query projection: {config.q_lora_rank} -> {config.num_attention_heads * (config.qk_nope_head_dim + config.qk_rope_head_dim)}")
+    print(
+        f"  Key-Value projection: {config.kv_lora_rank} -> {config.num_attention_heads * (config.qk_nope_head_dim + config.v_head_dim)}")

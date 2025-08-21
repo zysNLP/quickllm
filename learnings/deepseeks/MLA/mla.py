@@ -333,7 +333,7 @@ if __name__ == "__main__":
     """
     
     # 模型参数设置
-    d_model = 1024
+    d_model = 1024   # hidden_size
     num_heads = 64
     
     # 调整MHA的头维度以匹配MLA
@@ -364,9 +364,9 @@ if __name__ == "__main__":
     )
 
     # 初始化MLA模型
-    mla = MultiHeadLatentAttention(config)
+    mla = MultiHeadLatentAttention(config)  # MLA
     mha = Attention(config)
-    x = torch.randn(2, 10, d_model)  # 创建测试输入
+    x = torch.randn(2, 10, d_model)  # batch, seq, hidden,创建测试输入
     
     # 预计算旋转位置编码频率
     # freqs_cis: 这是旋转位置编码(RoPE)的核心组件
@@ -387,8 +387,7 @@ if __name__ == "__main__":
     print(f"Model MHA Size: {sum(p.numel() for p in mha.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
 
     # 运行前向传播
-    output_mla = mla(x, None, freqs_cis_mla)
     output_mha = mha(x, None, freqs_cis_mha)
+    output_mla = mla(x, None, freqs_cis_mla)
     print(output_mla.shape)
-    print(output_mha.shape)
-    
+
