@@ -333,21 +333,21 @@ if __name__ == "__main__":
     """
     
     # 模型参数设置
-    d_model = 1024   # hidden_size
-    num_heads = 64
+    d_model = 7168   # hidden_size
+    num_heads = 128
     
     # 调整MHA的头维度以匹配MLA
     # MLA的总头维度 = rope_head_dim + nope_head_dim = 64 + 32 = 96
     # 所以MHA的head_dim应该设置为96
-    mha_head_dim = 96  # 与MLA的总头维度匹配
+    mha_head_dim = 128  # 与MLA的总头维度匹配
     
     # 恢复MLA的原始参数
-    v_head_dim = 32
-    kv_lora_rank = 128
-    q_lora_rank = 3 * kv_lora_rank  # 查询秩是键值秩的3倍
+    v_head_dim = 128
+    kv_lora_rank = 512
+    q_lora_rank = 1536  # 查询秩是键值秩的3倍
     
     rope_head_dim = 64
-    nope_head_dim = 32
+    nope_head_dim = 128
     
     # 创建配置对象
     config = Config(
@@ -384,10 +384,10 @@ if __name__ == "__main__":
     
     # 打印模型信息
     print(f"Model MLA Size: {sum(p.numel() for p in mla.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
-    print(f"Model MHA Size: {sum(p.numel() for p in mha.parameters())/1e6}M params, attn size {d_model*d_model*4/1e6}m")
 
     # 运行前向传播
     output_mha = mha(x, None, freqs_cis_mha)
     output_mla = mla(x, None, freqs_cis_mla)
+    print(output_mha.shape)
     print(output_mla.shape)
 

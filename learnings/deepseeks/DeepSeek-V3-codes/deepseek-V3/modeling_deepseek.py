@@ -1858,14 +1858,14 @@ if __name__ == "__main__":
     # 使用DeepseekV3Config类
     config = DeepseekV3Config()
 
-    # 调整配置参数以适应你的输入
-    config.hidden_size = 1024  # 与输入维度匹配
-    config.num_attention_heads = 64  # 合理设置头数
-    config.kv_lora_rank = 128  # 适中的低秩维度
-    config.q_lora_rank = config.kv_lora_rank * 3  # 适中的低秩维度
-    config.qk_rope_head_dim = 64  # 保持与原始配置一致
-    config.qk_nope_head_dim = 32
-    config.v_head_dim = 32  # 调整以适应hidden_size
+    # # 调整配置参数以适应你的输入
+    # config.hidden_size = 1024  # 与输入维度匹配
+    # config.num_attention_heads = 64  # 合理设置头数
+    # config.kv_lora_rank = 128  # 适中的低秩维度
+    # config.q_lora_rank = config.kv_lora_rank * 3  # 适中的低秩维度
+    # config.qk_rope_head_dim = 64  # 保持与原始配置一致
+    # config.qk_nope_head_dim = 32
+    # config.v_head_dim = 32  # 调整以适应hidden_size
 
     # 计算合理的qk_nope_head_dim
     # 总头维度 = hidden_size / num_attention_heads = 1024 / 16 = 64
@@ -1877,7 +1877,9 @@ if __name__ == "__main__":
     attention_layer = DeepseekV3Attention(config, layer_idx=0)
 
     # 创建输入张量
-    batch_size, seq_len, hidden_size = 2, 10, 1024
+    hidden_size = 7168
+    # hidden_size = 1024
+    batch_size, seq_len = 2, 10
     x = torch.randn(batch_size, seq_len, hidden_size)
 
     # 创建position_ids
@@ -1904,23 +1906,7 @@ if __name__ == "__main__":
         output_attentions=False,
         use_cache=False
     )
-    print(f"Model MHA Size: {sum(p.numel() for p in attention_layer.parameters())/1e6}M params")
+    print(f"Model MLA Size: {sum(p.numel() for p in attention_layer.parameters())/1e6}M params")
 
     print(f"\nInput shape: {x.shape}")
     print(f"Output shape: {output.shape}")
-    if attn_weights is not None:
-        print(f"Attention weights shape: {attn_weights.shape}")
-    if past_key_value is not None:
-        print(f"Past key shape: {past_key_value[0].shape if past_key_value else 'None'}")
-        print(f"Past value shape: {past_key_value[1].shape if past_key_value else 'None'}")
-
-    # 验证输出形状是否正确
-    assert output.shape == x.shape, f"Output shape {output.shape} doesn't match input shape {x.shape}"
-    print("\nTest passed! Output shape matches input shape.")
-
-    # 打印一些中间变量的形状，帮助理解MLA的工作原理
-    print("\nMLA implementation details:")
-    print(
-        f"  Query projection: {config.q_lora_rank} -> {config.num_attention_heads * (config.qk_nope_head_dim + config.qk_rope_head_dim)}")
-    print(
-        f"  Key-Value projection: {config.kv_lora_rank} -> {config.num_attention_heads * (config.qk_nope_head_dim + config.v_head_dim)}")
