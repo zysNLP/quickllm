@@ -1858,27 +1858,11 @@ if __name__ == "__main__":
     # 使用DeepseekV3Config类
     config = DeepseekV3Config()
 
-    # # 调整配置参数以适应你的输入
-    # config.hidden_size = 1024  # 与输入维度匹配
-    # config.num_attention_heads = 64  # 合理设置头数
-    # config.kv_lora_rank = 128  # 适中的低秩维度
-    # config.q_lora_rank = config.kv_lora_rank * 3  # 适中的低秩维度
-    # config.qk_rope_head_dim = 64  # 保持与原始配置一致
-    # config.qk_nope_head_dim = 32
-    # config.v_head_dim = 32  # 调整以适应hidden_size
-
-    # 计算合理的qk_nope_head_dim
-    # 总头维度 = hidden_size / num_attention_heads = 1024 / 16 = 64
-    # 所以qk_nope_head_dim + qk_rope_head_dim + (v_head_dim - qk_rope_head_dim) 应该等于64
-    # 简化计算：qk_nope_head_dim + v_head_dim = 64
-
-
     # 创建注意力层实例
     attention_layer = DeepseekV3Attention(config, layer_idx=0)
 
     # 创建输入张量
     hidden_size = 7168
-    # hidden_size = 1024
     batch_size, seq_len = 2, 10
     x = torch.randn(batch_size, seq_len, hidden_size)
 
@@ -1887,15 +1871,6 @@ if __name__ == "__main__":
 
     # 创建正确的attention_mask形状 (batch_size, 1, query_length, key_length)
     attention_mask = torch.ones(batch_size, 1, seq_len, seq_len)
-
-    print("Configuration:")
-    print(f"  hidden_size: {config.hidden_size}")
-    print(f"  num_attention_heads: {config.num_attention_heads}")
-    print(f"  q_lora_rank: {config.q_lora_rank}")
-    print(f"  kv_lora_rank: {config.kv_lora_rank}")
-    print(f"  qk_rope_head_dim: {config.qk_rope_head_dim}")
-    print(f"  v_head_dim: {config.v_head_dim}")
-    print(f"  qk_nope_head_dim: {config.qk_nope_head_dim}")
 
     # 调用forward方法
     output, attn_weights, past_key_value = attention_layer(
