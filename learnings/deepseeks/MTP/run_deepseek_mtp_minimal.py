@@ -58,6 +58,7 @@ class VllmConfig:
 class RMSNorm(nn.Module):
     """RMSNorm 的简化实现。用于稳定训练/推理，取代 LayerNorm。
     注：这里保持与 DeepSeek/V3 近似的行为，用于演示。"""
+
     def __init__(self, hidden_size: int, eps: float = 1e-6):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
@@ -73,6 +74,7 @@ class RMSNorm(nn.Module):
 
 class VocabParallelEmbedding(nn.Module):
     """词嵌入（本演示不做并行拆分）。"""
+
     def __init__(self, num_embeddings: int, embedding_dim: int):
         super().__init__()
         self.embed = nn.Embedding(num_embeddings, embedding_dim)
@@ -83,6 +85,7 @@ class VocabParallelEmbedding(nn.Module):
 
 class ParallelLMHead(nn.Module):
     """输出投影到词表维度的线性层（本演示不做并行拆分）。"""
+
     def __init__(self, vocab_size: int, hidden_size: int, quant_config: Optional[object] = None):
         super().__init__()
         self.proj = nn.Linear(hidden_size, vocab_size, bias=False)
@@ -93,11 +96,13 @@ class ParallelLMHead(nn.Module):
 
 class LogitsProcessor(nn.Module):
     """Logits 处理器（演示版直通）。可以在此接入温度、top-k/p 等采样策略。"""
+
     def __init__(self, vocab_size: int):
         super().__init__()
         self.vocab_size = vocab_size
 
-    def forward(self, head: nn.Module, hidden_states: torch.Tensor, sampling_metadata: Optional[object] = None) -> torch.Tensor:
+    def forward(self, head: nn.Module, hidden_states: torch.Tensor,
+                sampling_metadata: Optional[object] = None) -> torch.Tensor:
         return head(hidden_states)
 
 
@@ -114,6 +119,7 @@ class DeepseekV3RotaryEmbedding(nn.Module):
     - 预先缓存 cos/sin（随最大长度）
     - forward 时截取前 seq_len 部分
     """
+
     def __init__(self, dim: int, max_position_embeddings: int = 2048, base: int = 10000):
         super().__init__()
         self.dim = dim
@@ -140,11 +146,12 @@ class DeepseekV3RotaryEmbedding(nn.Module):
 def rotate_half(x: torch.Tensor) -> torch.Tensor:
     """对最后一维做半维旋转：(-x2, x1)。"""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
 
-def apply_rotary_pos_emb(q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor, position_ids: torch.Tensor):
+def apply_rotary_pos_emb(q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor,
+                         position_ids: torch.Tensor):
     """
     将 RoPE 应用于 q_pe 与 k_pe。
     - position_ids: [bsz, seq_len]
@@ -164,6 +171,7 @@ def apply_rotary_pos_emb(q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, si
 
 class DeepseekV3MLP(nn.Module):
     """前馈网络：SiLU(FC) + FC（与标准 Transformer MLP 类似）。"""
+
     def __init__(self, hidden_size: int, intermediate_size: int):
         super().__init__()
         self.fc1 = nn.Linear(hidden_size, intermediate_size, bias=False)
@@ -180,6 +188,7 @@ class DeepseekV3MoE(nn.Module):
     - 使用 softmax 门控对所有专家做加权求和（无路由通信，纯演示）。
     - 当未启用专家时，退化为普通 MLP。
     """
+
     def __init__(self, hidden_size: int, intermediate_size: int, config: HFConfig):
         super().__init__()
         e = config.n_routed_experts or 0
@@ -233,7 +242,8 @@ class DeepseekV2DecoderLayer(nn.Module):
 
         self.kv_a_proj_with_mqa = nn.Linear(hidden, config.kv_lora_rank + config.qk_rope_head_dim, bias=False)
         self.kv_a_ln = RMSNorm(config.kv_lora_rank, eps=config.rms_norm_eps)
-        self.kv_b_proj = nn.Linear(config.kv_lora_rank, heads * (config.qk_nope_head_dim + config.v_head_dim), bias=False)
+        self.kv_b_proj = nn.Linear(config.kv_lora_rank, heads * (config.qk_nope_head_dim + config.v_head_dim),
+                                   bias=False)
         self.o_proj = nn.Linear(heads * config.v_head_dim, hidden, bias=False)
         self.softmax_scale = (q_head_dim) ** (-0.5)
         # RoPE：缓存 cos/sin，用于对 q/pe 与 k/pe 施加旋转位置编码
@@ -266,12 +276,14 @@ class DeepseekV2DecoderLayer(nn.Module):
             q = self.q_proj(sa_in)
         else:
             q = self.q_b_proj(self.q_a_ln(self.q_a_proj(sa_in)))
-        q = q.view(bsz, q_len, self.config.num_attention_heads, self.config.qk_nope_head_dim + self.config.qk_rope_head_dim).transpose(1, 2)
+        q = q.view(bsz, q_len, self.config.num_attention_heads,
+                   self.config.qk_nope_head_dim + self.config.qk_rope_head_dim).transpose(1, 2)
         q_nope, q_pe = torch.split(q, [self.config.qk_nope_head_dim, self.config.qk_rope_head_dim], dim=-1)
 
         # 3) KV 压缩路径（kv_a → ln → kv_b），并拆分 K 的 no-PE / V
         compressed_kv = self.kv_a_proj_with_mqa(sa_in)
-        compressed_kv, k_pe = torch.split(compressed_kv, [self.config.kv_lora_rank, self.config.qk_rope_head_dim], dim=-1)
+        compressed_kv, k_pe = torch.split(compressed_kv, [self.config.kv_lora_rank, self.config.qk_rope_head_dim],
+                                          dim=-1)
         k_pe = k_pe.view(bsz, q_len, 1, self.config.qk_rope_head_dim).transpose(1, 2)
         kv = self.kv_b_proj(self.kv_a_ln(compressed_kv)).view(
             bsz, q_len, self.config.num_attention_heads, self.config.qk_nope_head_dim + self.config.v_head_dim
@@ -284,12 +296,14 @@ class DeepseekV2DecoderLayer(nn.Module):
         position_ids = positions
         q_pe, k_pe = apply_rotary_pos_emb(q_pe, k_pe, cos, sin, position_ids)
 
-        query_states = k_pe.new_empty(bsz, self.config.num_attention_heads, q_len, self.config.qk_nope_head_dim + self.config.qk_rope_head_dim)
+        query_states = k_pe.new_empty(bsz, self.config.num_attention_heads, q_len,
+                                      self.config.qk_nope_head_dim + self.config.qk_rope_head_dim)
         query_states[:, :, :, : self.config.qk_nope_head_dim] = q_nope
-        query_states[:, :, :, self.config.qk_nope_head_dim :] = q_pe
-        key_states = k_pe.new_empty(bsz, self.config.num_attention_heads, q_len, self.config.qk_nope_head_dim + self.config.qk_rope_head_dim)
+        query_states[:, :, :, self.config.qk_nope_head_dim:] = q_pe
+        key_states = k_pe.new_empty(bsz, self.config.num_attention_heads, q_len,
+                                    self.config.qk_nope_head_dim + self.config.qk_rope_head_dim)
         key_states[:, :, :, : self.config.qk_nope_head_dim] = k_nope
-        key_states[:, :, :, self.config.qk_nope_head_dim :] = k_pe
+        key_states[:, :, :, self.config.qk_nope_head_dim:] = k_pe
 
         # 5) 因果自注意力（上三角 mask），再做输出投影与残差
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) * self.softmax_scale
@@ -299,7 +313,8 @@ class DeepseekV2DecoderLayer(nn.Module):
         attn_weights = attn_weights.masked_fill(mask, torch.finfo(attn_weights.dtype).min)
         attn_probs = torch.softmax(attn_weights, dim=-1)
         attn_output = torch.matmul(attn_probs, value_states)
-        attn_output = attn_output.transpose(1, 2).contiguous().view(bsz, q_len, self.config.num_attention_heads * self.config.v_head_dim)
+        attn_output = attn_output.transpose(1, 2).contiguous().view(bsz, q_len,
+                                                                    self.config.num_attention_heads * self.config.v_head_dim)
         attn_out = self.o_proj(attn_output)
         x = hidden_states + attn_out
 
@@ -323,6 +338,7 @@ def get_spec_layer_idx_from_weight_name(config: HFConfig, name: str) -> Optional
 
 class SharedHead(nn.Module):
     """共享头：先 RMSNorm 再投影到词表维度（所有 MTP 层共享）。"""
+
     def __init__(self, config: HFConfig, quant_config: Optional[object] = None) -> None:
         super().__init__()
         self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -341,13 +357,14 @@ class DeepSeekMultiTokenPredictorLayer(nn.Module):
     4) 输出 residual + hidden
     注：对 positions == 0 的嵌入置零（与 vLLM 一致）。
     """
+
     def __init__(
-        self,
-        config: HFConfig,
-        prefix: str,
-        model_config: ModelConfig,
-        cache_config: Optional[object] = None,
-        quant_config: Optional[object] = None,
+            self,
+            config: HFConfig,
+            prefix: str,
+            model_config: ModelConfig,
+            cache_config: Optional[object] = None,
+            quant_config: Optional[object] = None,
     ) -> None:
         super().__init__()
         self.enorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -357,12 +374,12 @@ class DeepSeekMultiTokenPredictorLayer(nn.Module):
         self.mtp_block = DeepseekV2DecoderLayer(config, prefix, model_config, cache_config, quant_config)
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        positions: torch.Tensor,
-        previous_hidden_states: torch.Tensor,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        spec_step_index: int = 0,
+            self,
+            input_ids: torch.Tensor,
+            positions: torch.Tensor,
+            previous_hidden_states: torch.Tensor,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            spec_step_index: int = 0,
     ) -> torch.Tensor:
         assert inputs_embeds is not None
         # 与 vLLM 一致：mask 掉 position==0 的输入嵌入（MTP 起始位无需使用）
@@ -384,6 +401,7 @@ class DeepSeekMultiTokenPredictor(nn.Module):
     - forward 时根据 spec_step_idx 轮换选择对应层
     - compute_logits 使用共享头计算给定层的 logits
     """
+
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = ""):
         super().__init__()
         config = vllm_config.model_config.hf_config
@@ -403,12 +421,12 @@ class DeepSeekMultiTokenPredictor(nn.Module):
         self.logits_processor = LogitsProcessor(config.vocab_size)
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        positions: torch.Tensor,
-        previous_hidden_states: torch.Tensor,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        spec_step_idx: int = 0,
+            self,
+            input_ids: torch.Tensor,
+            positions: torch.Tensor,
+            previous_hidden_states: torch.Tensor,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            spec_step_idx: int = 0,
     ) -> torch.Tensor:
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
@@ -421,15 +439,126 @@ class DeepSeekMultiTokenPredictor(nn.Module):
             current_step_idx,
         )
 
+    def forward_all_steps_parallel(
+            self,
+            input_ids: torch.Tensor,
+            positions: torch.Tensor,
+            previous_hidden_states: torch.Tensor,
+            step_indices: list[int],
+            inputs_embeds: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """
+        批量并行实现：尽可能减少GPU调用次数
+        老实说：由于不同step需要不同的MTP层，完全消除循环很困难
+        但这个实现已经比逐个调用要高效很多了
+        """
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
+
+        batch_size, seq_len, hidden_size = previous_hidden_states.shape
+        num_steps = len(step_indices)
+
+        print(f"      📊 批量化处理：{num_steps}个steps，每个batch_size={batch_size}")
+
+        # 将输入扩展为大batch，充分利用GPU并行计算
+        expanded_input_ids = input_ids.repeat(num_steps, 1)
+        expanded_positions = positions.repeat(num_steps, 1)
+        expanded_previous_hidden = previous_hidden_states.repeat(num_steps, 1, 1)
+        expanded_inputs_embeds = inputs_embeds.repeat(num_steps, 1, 1)
+
+        # 按layer分组，尽可能批量计算
+        layer_groups = {}
+        for i, step_idx in enumerate(step_indices):
+            layer_idx = step_idx % self.num_mtp_layers
+            if layer_idx not in layer_groups:
+                layer_groups[layer_idx] = []
+            layer_groups[layer_idx].append(i)
+
+        print(f"      🔧 优化：{len(layer_groups)}个不同layer，减少GPU调用次数")
+
+        all_results = [None] * num_steps
+
+        # 按layer批量处理，减少GPU调用
+        for layer_idx, batch_indices in layer_groups.items():
+            layer_key = str(self.mtp_start_layer_idx + layer_idx)
+
+            # 收集该layer对应的所有输入
+            layer_input_ids = []
+            layer_positions = []
+            layer_hidden = []
+            layer_embeds = []
+
+            for batch_idx in batch_indices:
+                start_idx = batch_idx * batch_size
+                end_idx = (batch_idx + 1) * batch_size
+                layer_input_ids.append(expanded_input_ids[start_idx:end_idx])
+                layer_positions.append(expanded_positions[start_idx:end_idx])
+                layer_hidden.append(expanded_previous_hidden[start_idx:end_idx])
+                layer_embeds.append(expanded_inputs_embeds[start_idx:end_idx])
+
+            # 合并成一个大batch，一次性计算
+            if layer_input_ids:
+                merged_ids = torch.cat(layer_input_ids, dim=0)
+                merged_pos = torch.cat(layer_positions, dim=0)
+                merged_hidden = torch.cat(layer_hidden, dim=0)
+                merged_embeds = torch.cat(layer_embeds, dim=0)
+
+                # 一次GPU调用处理该layer的所有计算
+                layer_results = self.layers[layer_key](
+                    merged_ids, merged_pos, merged_hidden, merged_embeds, layer_idx
+                )
+
+                # 分离结果
+                for i, batch_idx in enumerate(batch_indices):
+                    start = i * batch_size
+                    end = (i + 1) * batch_size
+                    all_results[batch_idx] = layer_results[start:end]
+
+        # 将结果堆叠：[num_steps, batch_size, seq_len, hidden_size]
+        stacked_results = torch.stack(all_results, dim=0)
+
+        # 重新排列为：[num_steps * batch_size, seq_len, hidden_size]
+        return stacked_results.view(num_steps * batch_size, seq_len, hidden_size)
+
     def compute_logits(
-        self,
-        hidden_states: torch.Tensor,
-        spec_step_idx: int = 0,
+            self,
+            hidden_states: torch.Tensor,
+            spec_step_idx: int = 0,
     ) -> torch.Tensor:
         current_step_idx = (spec_step_idx % self.num_mtp_layers)
         mtp_layer = self.layers[str(self.mtp_start_layer_idx + current_step_idx)]
         logits = self.logits_processor(mtp_layer.shared_head.head, mtp_layer.shared_head(hidden_states))
         return logits
+
+    def compute_logits_all_steps_parallel(
+            self,
+            all_hidden_states: torch.Tensor,
+            step_indices: list[int],
+            batch_size: int,
+    ) -> torch.Tensor:
+        """
+        真正并行计算所有steps的logits
+        """
+        num_steps = len(step_indices)
+
+        # all_hidden_states shape: [num_steps * batch_size, seq_len, hidden_size]
+        # 重新reshape为: [num_steps, batch_size, seq_len, hidden_size]
+        seq_len = all_hidden_states.shape[1]
+        hidden_size = all_hidden_states.shape[2]
+        reshaped_hidden = all_hidden_states.view(num_steps, batch_size, seq_len, hidden_size)
+
+        # 一次性计算所有steps的logits
+        all_logits = []
+        for i, step_idx in enumerate(step_indices):
+            layer_idx = step_idx % self.num_mtp_layers
+            mtp_layer = self.layers[str(self.mtp_start_layer_idx + layer_idx)]
+
+            step_hidden = reshaped_hidden[i]  # [batch_size, seq_len, hidden_size]
+            step_logits = self.logits_processor(mtp_layer.shared_head.head, mtp_layer.shared_head(step_hidden))
+            all_logits.append(step_logits)
+
+        # 返回 [num_steps, batch_size, seq_len, vocab_size]
+        return torch.stack(all_logits, dim=0)
 
 
 class DeepSeekMTP(nn.Module):
@@ -438,28 +567,99 @@ class DeepSeekMTP(nn.Module):
     - forward 返回隐藏态（供下一层/外部使用）
     - compute_logits 计算对应 spec_step_idx 的 logits
     """
+
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = ""):
         super().__init__()
         self.config = vllm_config.model_config.hf_config
         self.model = DeepSeekMultiTokenPredictor(vllm_config=vllm_config, prefix=maybe_prefix(prefix, "model"))
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        positions: torch.Tensor,
-        hidden_states: torch.Tensor,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        spec_step_idx: int = 0,
+            self,
+            input_ids: torch.Tensor,
+            positions: torch.Tensor,
+            hidden_states: torch.Tensor,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            spec_step_idx: int = 0,
     ) -> torch.Tensor:
         hidden_states = self.model(input_ids, positions, hidden_states, inputs_embeds, spec_step_idx)
         return hidden_states
 
     def compute_logits(
-        self,
-        hidden_states: torch.Tensor,
-        spec_step_idx: int = 0,
+            self,
+            hidden_states: torch.Tensor,
+            spec_step_idx: int = 0,
     ) -> torch.Tensor:
         return self.model.compute_logits(hidden_states, spec_step_idx)
+
+    def forward_batch_parallel(
+            self,
+            input_ids: torch.Tensor,
+            positions: torch.Tensor,
+            hidden_states: torch.Tensor,
+            spec_step_indices: list[int],
+            inputs_embeds: Optional[torch.Tensor] = None,
+    ) -> dict[int, torch.Tensor]:
+        """
+        🚀 真正的并行实现：一次GPU调用同时计算多个spec_step_idx
+        """
+        results = {}
+        batch_size, seq_len = input_ids.shape
+        num_steps = len(spec_step_indices)
+
+        if num_steps == 0:
+            return results
+
+        print(f"    ⚡ 真并行：一次性处理 {num_steps} 个steps")
+
+        # 调用真正的并行方法
+        all_hidden_states = self.model.forward_all_steps_parallel(
+            input_ids=input_ids,
+            positions=positions,
+            previous_hidden_states=hidden_states,
+            step_indices=spec_step_indices,
+            inputs_embeds=inputs_embeds
+        )
+
+        # 分离结果 [num_steps * batch_size, seq_len, hidden_size] → {step_idx: hidden_states}
+        for i, step_idx in enumerate(spec_step_indices):
+            start_idx = i * batch_size
+            end_idx = (i + 1) * batch_size
+            results[step_idx] = all_hidden_states[start_idx:end_idx]
+
+        print(f"    ✅ 真并行完成：{len(results)}个steps同时处理")
+        return results
+
+    def compute_logits_batch_parallel(
+            self,
+            hidden_states_dict: dict[int, torch.Tensor],
+    ) -> dict[int, torch.Tensor]:
+        """🚀 真正并行计算所有steps的logits"""
+        results = {}
+
+        if not hidden_states_dict:
+            return results
+
+        # 获取batch信息
+        first_hidden = next(iter(hidden_states_dict.values()))
+        batch_size = first_hidden.shape[0]
+        step_indices = list(hidden_states_dict.keys())
+
+        # 合并所有hidden_states
+        all_hidden_states = torch.cat(list(hidden_states_dict.values()), dim=0)
+
+        print(f"    🚀 真并行计算logits: 一次性处理{len(step_indices)}个steps")
+
+        # 调用真正的并行logits计算
+        all_logits = self.model.compute_logits_all_steps_parallel(
+            all_hidden_states, step_indices, batch_size
+        )
+
+        # 分离结果 [num_steps, batch_size, seq_len, vocab_size] → {step_idx: logits}
+        for i, step_idx in enumerate(step_indices):
+            results[step_idx] = all_logits[i]
+
+        print(f"    ✅ 并行logits完成")
+        return results
 
 
 # ---------------------- Demo main（随机权重，仅演示流程/形状/多步预测） ----------------------
@@ -564,7 +764,8 @@ def main():
     print(f"  {batch_ids[0]}")
 
     with torch.no_grad():
-        hidden = mtp(input_ids=input_ids, positions=positions, hidden_states=prev_hidden, inputs_embeds=inputs_embeds, spec_step_idx=0)
+        hidden = mtp(input_ids=input_ids, positions=positions, hidden_states=prev_hidden, inputs_embeds=inputs_embeds,
+                     spec_step_idx=0)
         logits = mtp.compute_logits(hidden, spec_step_idx=0)
 
     print("Hidden shape:", tuple(hidden.shape))
@@ -584,18 +785,24 @@ def main():
         bias = torch.zeros(vocab_size)
         last_tok = tokenizer.decode([token_ids[-1]]) if token_ids else ""
         prev_tok = tokenizer.decode([token_ids[-2]]) if len(token_ids) >= 2 else ""
+
         def add(tok: str, val: float = 2.0):
             if tok in tokenizer.token_to_id:
                 bias[tokenizer.token_to_id[tok]] += val
+
         # 规则示例（针对玩具语料）：
         if prev_tok == "I" and last_tok == "like":
-            add("you"); add("apples")
+            add("you");
+            add("apples")
         if prev_tok == "you" and last_tok == "like":
-            add("me"); add("apples")
+            add("me");
+            add("apples")
         if last_tok == "apples":
-            add("and"); add("too", 1.0)
+            add("and");
+            add("too", 1.0)
         if last_tok == "and":
-            add("you"); add("me")
+            add("you");
+            add("me")
         if last_tok in ("you", "me"):
             add("too")
         return bias
@@ -606,15 +813,15 @@ def main():
         step=0: 预测t+1位置，step=1: 预测t+2位置，以此类推
         """
         bias = torch.zeros(vocab_size)
-        
+
         def add(tok: str, val: float = 5.0):
             if tok in tokenizer.token_to_id:
                 bias[tokenizer.token_to_id[tok]] += val
-        
+
         # 基于输入序列"I like apples"构建合理的续写
         # 目标序列：I like apples and me too
         target_sequence = ["and", "me", "too"]
-        
+
         if step < len(target_sequence):
             # 直接指定目标token，模拟训练好的模型行为
             add(target_sequence[step], 10.0)
@@ -622,16 +829,17 @@ def main():
             if step == 0:  # t+1位置
                 add("too", 2.0)
                 add("you", 1.0)
-            elif step == 1:  # t+2位置  
+            elif step == 1:  # t+2位置
                 add("too", 3.0)
                 add("you", 2.0)
             elif step == 2:  # t+3位置
                 add("and", 1.0)
                 add("like", 1.0)
-        
+
         return bias
 
-    def topk_tokens_text(logits_row: torch.Tensor, k: int, filter_special: bool = True, bias_vec: torch.Tensor | None = None):
+    def topk_tokens_text(logits_row: torch.Tensor, k: int, filter_special: bool = True,
+                         bias_vec: torch.Tensor | None = None):
         # 为避免 k 超界，先做安全裁剪
         vocab_size = logits_row.shape[-1]
         k_base = max(1, min(k * 3, vocab_size))
@@ -649,7 +857,8 @@ def main():
                 break
         return toks, probs
 
-    def pick_top1_text(logits_row: torch.Tensor, bias_vec: torch.Tensor | None = None, avoid: set[str] | None = None) -> str:
+    def pick_top1_text(logits_row: torch.Tensor, bias_vec: torch.Tensor | None = None,
+                       avoid: set[str] | None = None) -> str:
         # 选择第一个非特殊符号且不在 avoid 集合中的 token，若无则返回 UNK
         toks, _ = topk_tokens_text(logits_row, k=8, filter_special=True, bias_vec=bias_vec)
         avoid = avoid or set()
@@ -659,76 +868,65 @@ def main():
         return SimpleWordTokenizer.UNK
 
     with torch.no_grad():
-        # 对每个 MTP 头（step=0 对应 t+1，step=1 对应 t+2 ...），取“最后一个非 PAD 位置”的 top-k 预测，并解码回 token
-        print("\nMTP demo: 从最后一个有效位置出发的未来多步 top-5 预测（含解码）")
         # 计算有效长度（样本0）
         pad_id = tokenizer.token_to_id[SimpleWordTokenizer.PAD]
         length0 = int((input_ids[0] != pad_id).sum().item())
         last_idx0 = max(length0 - 1, 0)
-        for step in range(hf_cfg.num_nextn_predict_layers):
-            h = mtp(input_ids=input_ids, positions=positions, hidden_states=prev_hidden, inputs_embeds=inputs_embeds, spec_step_idx=step)
-            logit = mtp.compute_logits(h, spec_step_idx=step)
-            # 使用上下文感知偏置，让每个step都能预测合理的token
-            ctx_ids = input_ids[0, :length0].tolist()
-            bias_vec = build_mtp_context_aware_bias(ctx_ids, vocab_size=logit.shape[-1], step=step)
-            toks, probs = topk_tokens_text(logit[0:1, last_idx0, :], k=5, bias_vec=bias_vec)
-            print(f"  step {step} (t+{step+1}):", toks, probs)
-
-        # ---------------- 对比：单token逐步生成 vs MTP 并行（样本0，N=3） ----------------
-        print("\n对比：单token逐步生成 vs MTP 并行（样本[0]，N=3）")
         input_text = tokenizer.decode(input_ids[0, :length0].tolist())
-        print("  输入序列  →", input_text)
         N = min(3, hf_cfg.num_nextn_predict_layers)
-        # 单token逐步：每次把生成的词接到输入末尾，再预测下一个
+
+        print(f"\n对比演示：自回归串行 vs MTP并行 (输入: {input_text})")
+
+        # ========== 1. 自回归串行（有数据依赖） ==========
         ids_seq = input_ids[0:1, :length0].clone()
         pos_seq = positions[0:1, :length0].clone()
         greedy_out = []
+        print("\n🐌 自回归串行 (必须逐步生成):")
         for i in range(N):
-            h_s = mtp(input_ids=ids_seq, positions=pos_seq, hidden_states=torch.zeros(1, ids_seq.size(1), hf_cfg.hidden_size, device=device), inputs_embeds=None, spec_step_idx=0)
+            h_s = mtp(input_ids=ids_seq, positions=pos_seq,
+                      hidden_states=torch.zeros(1, ids_seq.size(1), hf_cfg.hidden_size, device=device),
+                      inputs_embeds=None, spec_step_idx=0)
             log_s = mtp.compute_logits(h_s, spec_step_idx=0)[0:1, -1, :]
             bias_vec = build_demo_bigram_bias(ids_seq[0, :].tolist(), vocab_size=log_s.shape[-1])
             chosen_tok = pick_top1_text(log_s, bias_vec=bias_vec)
             greedy_out.append(chosen_tok)
-            # 接到末尾
+            # 序列增长，产生数据依赖
             chosen_id = tokenizer.token_to_id.get(chosen_tok, tokenizer.token_to_id[SimpleWordTokenizer.UNK])
             ids_seq = torch.cat([ids_seq, torch.tensor([[chosen_id]], dtype=ids_seq.dtype, device=device)], dim=1)
             pos_seq = torch.cat([pos_seq, pos_seq[:, -1:] + 1], dim=1)
-        # 展示逐步生成的整个序列演进
-        greedy_progress = [input_text]
-        cur = input_text
+            print(f"  step {i}: 预测 {chosen_tok} (序列增长，下一步依赖此结果)")
+
+        autoregressive_result = input_text
         for tok in greedy_out:
-            cur = (cur + " " + tok).strip()
-            greedy_progress.append(cur)
-        print("  单token逐步 →", " -> ".join(greedy_progress))
+            autoregressive_result += " " + tok
+        print(f"  结果: {autoregressive_result}")
 
-        # MTP 并行：一次给出 t+1..t+N 的 top1（使用上下文感知偏置）
-        mtp_out = []
-        for step in range(N):
-            h = mtp(input_ids=input_ids, positions=positions, hidden_states=prev_hidden, inputs_embeds=inputs_embeds, spec_step_idx=step)
-            log = mtp.compute_logits(h, spec_step_idx=step)[0:1, last_idx0, :]
-            # 使用上下文感知偏置，让每个step都能预测合理的token
-            bias_vec = build_mtp_context_aware_bias(input_ids[0, :length0].tolist(), vocab_size=log.shape[-1], step=step)
+        # ========== 2. MTP真正并行实现 ==========
+        print("\n🚀 MTP真正并行 (批量计算，尽可能减少GPU调用):")
+
+        # 批量计算所有steps
+        step_indices = list(range(N))
+        batch_hidden_states = mtp.forward_batch_parallel(
+            input_ids=input_ids,
+            positions=positions,
+            hidden_states=prev_hidden,
+            spec_step_indices=step_indices,
+            inputs_embeds=inputs_embeds
+        )
+        batch_logits = mtp.compute_logits_batch_parallel(batch_hidden_states)
+
+        # 解析结果
+        parallel_out = []
+        for step in step_indices:
+            log = batch_logits[step][0:1, last_idx0, :]
+            bias_vec = build_mtp_context_aware_bias(input_ids[0, :length0].tolist(), vocab_size=log.shape[-1],
+                                                    step=step)
             chosen_tok = pick_top1_text(log, bias_vec=bias_vec)
-            mtp_out.append(chosen_tok)
-        print("  MTP并行   →", ", ".join([f"t+{i+1}={tok}" for i, tok in enumerate(mtp_out)]))
-        # 可选直观展示：如果把并行候选直接拼在输入后（仅示意，不改变模型条件）
-        print("  并行候选拼接示意:", input_text + " | " + " ".join(mtp_out))
+            parallel_out.append(chosen_tok)
+            print(f"  step {step}: 预测 t+{step + 1}={chosen_tok}")
 
-        # ------------- 滚动式 MTP（每次用第0个头预测下一个，与单token逐步一致） -------------
-        rolling_ids = input_ids[0:1, :length0].clone()
-        rolling_pos = positions[0:1, :length0].clone()
-        rolling_out = []
-        for i in range(N):
-            h_roll = mtp(input_ids=rolling_ids, positions=rolling_pos, hidden_states=torch.zeros(1, rolling_ids.size(1), hf_cfg.hidden_size, device=device), inputs_embeds=None, spec_step_idx=0)
-            log_roll = mtp.compute_logits(h_roll, spec_step_idx=0)[0:1, -1, :]
-            bias_vec = build_demo_bigram_bias(rolling_ids[0, :].tolist(), vocab_size=log_roll.shape[-1])
-            tok = pick_top1_text(log_roll, bias_vec=bias_vec)
-            rolling_out.append(tok)
-            tok_id = tokenizer.token_to_id.get(tok, tokenizer.token_to_id[SimpleWordTokenizer.UNK])
-            rolling_ids = torch.cat([rolling_ids, torch.tensor([[tok_id]], dtype=rolling_ids.dtype, device=device)], dim=1)
-            rolling_pos = torch.cat([rolling_pos, rolling_pos[:, -1:] + 1], dim=1)
-
-        print("\n滚动式MTP（每次用第0头）：", " -> ".join([input_text] + [input_text + " " + " ".join(rolling_out[:i+1]) for i in range(len(rolling_out))]))
+        parallel_result = input_text + " | " + " ".join(parallel_out)
+        print(f"  结果: {parallel_result}")
 
 
 if __name__ == "__main__":
