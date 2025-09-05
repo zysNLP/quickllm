@@ -2,3 +2,7 @@
 
 https://blog.csdn.net/Z987421/article/details/148842503
 
+OpenManus
+
+https://github.com/FoundationAgents/OpenManus
+
