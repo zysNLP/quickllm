@@ -8,4 +8,6 @@ peft
 bert4keras
 scikit-learn
 loguru
+python-dotenv
+openai
 
