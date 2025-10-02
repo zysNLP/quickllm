@@ -1,0 +1,27 @@
+# Requirements for train_transformer.py
+# Core PyTorch dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Data processing and tokenization
+datasets>=2.14.0
+tokenizers>=0.13.0
+transformers>=4.30.0
+
+# Scientific computing
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Machine learning utilities
+scikit-learn>=1.0.0
+
+# Visualization
+matplotlib>=3.5.0
+
+# TensorFlow dependencies
+tensorflow>=2.13.0
+tensorflow-datasets>=4.9.0
+
+# Standard library dependencies (included with Python)
+# os, sys, time, math, pathlib, datetime - no additional packages needed
