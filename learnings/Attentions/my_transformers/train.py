@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# 设置多卡训练 - 必须在导入torch之前设置
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3,5,6,7"  # 使用显存较少的卡
-
 import sys
 import time
 import math
@@ -25,33 +22,37 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import _LRScheduler
 from transformers import get_cosine_schedule_with_warmup
 from datetime import datetime
+from loguru import logger
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 def check_env():
     """
     检查 PyTorch 环境信息、GPU 状态，以及常用依赖库版本。
     返回推荐的 device ('cuda' 或 'cpu')。
     """
-    print("===== PyTorch & 系统信息 =====")
-    print("torch.__version__:", torch.__version__)
-    print("python version:", sys.version_info)
+    logger.info("===== PyTorch & 系统信息 =====")
+    logger.info("torch.__version__:", torch.__version__)
+    logger.info("python version:", sys.version_info)
 
-    print("\n===== 常用库版本 =====")
+    logger.info("\n===== 常用库版本 =====")
     for module in (mpl, np, pd, torch):
-        print(module.__name__, module.__version__)
+        logger.info(module.__name__, module.__version__)
 
-    print("\n===== GPU 检查 =====")
-    print("torch.cuda.is_available():", torch.cuda.is_available())
-    print("torch.version.cuda:", torch.version.cuda)
+    logger.info("\n===== GPU 检查 =====")
+    logger.info("torch.cuda.is_available():", torch.cuda.is_available())
+    logger.info("torch.version.cuda:", torch.version.cuda)
     try:
-        print("cudnn version:", torch.backends.cudnn.version())
+        logger.info("cudnn version:", torch.backends.cudnn.version())
     except Exception as e:
-        print("cudnn version: N/A", e)
+        logger.info("cudnn version: N/A", e)
 
     if torch.cuda.is_available():
-        print("GPU count:", torch.cuda.device_count())
-        print("Current device id:", torch.cuda.current_device())
-        print("GPU name:", torch.cuda.get_device_name(0))
-        print("bfloat16 supported:", torch.cuda.is_bf16_supported())
+        logger.info("GPU count:", torch.cuda.device_count())
+        logger.info("Current device id:", torch.cuda.current_device())
+        logger.info("GPU name:", torch.cuda.get_device_name(0))
+        logger.info("bfloat16 supported:", torch.cuda.is_bf16_supported())
 
         # 启用 TF32
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -62,10 +63,10 @@ def check_env():
             pass
         device = "cuda"
     else:
-        print("⚠️ 没检测到 CUDA，可强制 device='cpu' 运行，但速度会慢")
+        logger.info("⚠️ 没检测到 CUDA，可强制 device='cpu' 运行，但速度会慢")
         device = "cpu"
 
-    print("\n推荐使用 device: Cuda;")
+    logger.info("\n推荐使用 device: Cuda;")
     return device
 
 
@@ -81,7 +82,7 @@ def load_translation_dataset(train_path: str, val_path: str, delimiter: str = "\
     返回:
         train_dataset, val_dataset
     """
-    print("开始加载数据...")
+    logger.info("开始加载数据...")
     dataset = load_dataset(
         "csv",
         data_files={
@@ -92,26 +93,27 @@ def load_translation_dataset(train_path: str, val_path: str, delimiter: str = "\
         delimiter=delimiter
     )
 
-    print("数据集类型:", type(dataset))
-    print(dataset)
+    logger.info("数据集类型:", type(dataset))
+    logger.info(dataset)
 
     # 打印一个样本
     sample = dataset["train"][0]
-    print(f"示例数据 -> pt: {sample['pt']} | en: {sample['en']}")
+    logger.info(f"示例数据 -> pt: {sample['pt']} | en: {sample['en']}")
 
     return dataset["train"], dataset["validation"]
 
 
 def train_and_load_tokenizers(
-        train_dataset,
-        pt_key="pt",
-        en_key="en",
-        vocab_size=2 ** 13,
-        min_freq=2,
-        special_tokens=["<s>", "<pad>", "</s>", "<unk>", "<mask>"],
-        save_dir_pt="tok_pt",
-        save_dir_en="tok_en",
-        max_length=1024):
+    train_dataset,
+    pt_key="pt",
+    en_key="en",
+    vocab_size=2 ** 13,
+    min_freq=2,
+    special_tokens=["<s>", "<pad>", "</s>", "<unk>", "<mask>"],
+    save_dir_pt="tok_pt",
+    save_dir_en="tok_en",
+    max_length=1024
+):
     """
     训练并加载葡萄牙语和英语的 ByteLevel BPE Tokenizer
 
@@ -177,8 +179,8 @@ def train_and_load_tokenizers(
         tok.model_max_length = max_length
         tok.padding_side = "right"
 
-    print("pt vocab size:", len(pt_tokenizer))
-    print("en vocab size:", len(en_tokenizer))
+    logger.info("pt vocab size:", len(pt_tokenizer))
+    logger.info("en vocab size:", len(en_tokenizer))
 
     return pt_tokenizer, en_tokenizer
 
@@ -198,19 +200,19 @@ def test_tokenizers(en_tokenizer, pt_tokenizer,
     """
 
     # --- English ---
-    print("=== English Tokenizer Test ===")
+    logger.info("=== English Tokenizer Test ===")
     en_ids = en_tokenizer.encode(en_sample, add_special_tokens=False)
-    print(f"[EN] Tokenized IDs: {en_ids}")
+    logger.info(f"[EN] Tokenized IDs: {en_ids}")
 
     en_decoded = en_tokenizer.decode(
         en_ids,
         skip_special_tokens=True,
         clean_up_tokenization_spaces=False
     )
-    print(f"[EN] Decoded string: {en_decoded}")
+    logger.info(f"[EN] Decoded string: {en_decoded}")
     assert en_decoded == en_sample, "EN decode != original input!"
 
-    print("[EN] id --> decoded([id])  |  id --> token(str)")
+    logger.info("[EN] id --> decoded([id])  |  id --> token(str)")
     for tid in en_ids:
         single_decoded = en_tokenizer.decode(
             [tid],
@@ -218,24 +220,24 @@ def test_tokenizers(en_tokenizer, pt_tokenizer,
             clean_up_tokenization_spaces=False
         )
         token_str = en_tokenizer.convert_ids_to_tokens(tid)
-        print(f"{tid:>6} --> {single_decoded!r}  |  {tid:>6} --> {token_str!r}")
+        logger.info(f"{tid:>6} --> {single_decoded!r}  |  {tid:>6} --> {token_str!r}")
 
-    print("\n" + "-" * 60 + "\n")
+    logger.info("\n" + "-" * 60 + "\n")
 
     # --- Portuguese ---
-    print("=== Portuguese Tokenizer Test ===")
+    logger.info("=== Portuguese Tokenizer Test ===")
     pt_ids = pt_tokenizer.encode(pt_sample, add_special_tokens=False)
-    print(f"[PT] Tokenized IDs: {pt_ids}")
+    logger.info(f"[PT] Tokenized IDs: {pt_ids}")
 
     pt_decoded = pt_tokenizer.decode(
         pt_ids,
         skip_special_tokens=True,
         clean_up_tokenization_spaces=False
     )
-    print(f"[PT] Decoded string: {pt_decoded}")
+    logger.info(f"[PT] Decoded string: {pt_decoded}")
     assert pt_decoded == pt_sample, "PT decode != original input!"
 
-    print("[PT] id --> decoded([id])  |  id --> token(str)")
+    logger.info("[PT] id --> decoded([id])  |  id --> token(str)")
     for tid in pt_ids:
         single_decoded = pt_tokenizer.decode(
             [tid],
@@ -243,28 +245,18 @@ def test_tokenizers(en_tokenizer, pt_tokenizer,
             clean_up_tokenization_spaces=False
         )
         token_str = pt_tokenizer.convert_ids_to_tokens(tid)
-        print(f"{tid:>6} --> {single_decoded!r}  |  {tid:>6} --> {token_str!r}")
-
-
-def encode_with_bos_eos(tokenizer, text: str):
-    """编码文本并添加 BOS/EOS 标记"""
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    bos_id = tokenizer.bos_token_id
-    eos_id = tokenizer.eos_token_id
-    if bos_id is None or eos_id is None:
-        raise ValueError("请确保 tokenizer 设置了 bos_token/eos_token")
-    return [bos_id] + ids + [eos_id]
+        logger.info(f"{tid:>6} --> {single_decoded!r}  |  {tid:>6} --> {token_str!r}")
 
 
 def build_dataloaders(
-        train_dataset,
-        val_dataset,
-        pt_tokenizer,
-        en_tokenizer,
-        batch_size: int = 64,
-        max_length: int = 48,
-        num_workers: int = 0,
-        shuffle_train: bool = True,
+    train_dataset,
+    val_dataset,
+    pt_tokenizer,
+    en_tokenizer,
+    batch_size: int = 64,
+    max_length: int = 48,
+    num_workers: int = 0,
+    shuffle_train: bool = True,
 ):
     """
     构建训练和验证 DataLoader（等价 TF 的 filter_by_max_length + padded_batch）
@@ -283,6 +275,15 @@ def build_dataloaders(
         train_loader, val_loader
     """
 
+    # 1) 小工具：编码 + 添加 BOS/EOS
+    def encode_with_bos_eos(tokenizer, text: str):
+        ids = tokenizer.encode(text, add_special_tokens=False)
+        bos_id = tokenizer.bos_token_id
+        eos_id = tokenizer.eos_token_id
+        if bos_id is None or eos_id is None:
+            raise ValueError("请确保 tokenizer 设置了 bos_token/eos_token")
+        return [bos_id] + ids + [eos_id]
+
     # 2) 构造已过滤的样本对
     def build_filtered_pairs(hf_split, pt_tok, en_tok, max_len: int):
         pairs, kept, skipped = [], 0, 0
@@ -294,7 +295,7 @@ def build_dataloaders(
                 kept += 1
             else:
                 skipped += 1
-        print(f"[filter] kept={kept}, skipped={skipped}, max_length={max_len}")
+        logger.info(f"[filter] kept={kept}, skipped={skipped}, max_length={max_len}")
         return pairs
 
     train_pairs = build_filtered_pairs(train_dataset, pt_tokenizer, en_tokenizer, max_length)
@@ -364,16 +365,16 @@ def test_dataloaders(train_loader, val_loader, show_val: bool = True):
     """
     # 1. 拿一个训练 batch 看 shape
     batch = next(iter(train_loader))
-    print("=== Train Loader Batch Shapes ===")
+    logger.info("=== Train Loader Batch Shapes ===")
     for k, v in batch.items():
-        print(f"{k:20s} {tuple(v.shape)}")
+        logger.info(f"{k:20s} {tuple(v.shape)}")
 
     # 2. 验证集样本
     if show_val:
-        print("\n=== Validation Loader Example ===")
+        logger.info("\n=== Validation Loader Example ===")
         for i in val_loader:
-            print("pt_input_ids:     ", i["pt_input_ids"][0])
-            print("pt_attention_mask:", i["pt_attention_mask"][0])
+            logger.info("pt_input_ids:     ", i["pt_input_ids"][0])
+            logger.info("pt_attention_mask:", i["pt_attention_mask"][0])
             break
 
 
@@ -490,8 +491,8 @@ def scaled_dot_product_attention(q, k, v, mask=None):
 
     # 加上 mask
     if mask is not None:
-        # 在 mask==1 的位置加上 -1e4，使 softmax 后趋近于0 (兼容FP16)
-        scaled_attention_logits = scaled_attention_logits.masked_fill(mask == 1, -1e4)
+        # 在 mask==1 的位置加上 -1e9，使 softmax 后趋近于0
+        scaled_attention_logits = scaled_attention_logits.masked_fill(mask == 1, -1e9)
 
     # softmax 得到注意力权重
     attention_weights = F.softmax(scaled_attention_logits, dim=-1)
@@ -986,7 +987,7 @@ class AverageMeter:
     def avg(self): return self.sum / max(1, self.n)
 
 
-def train_step(batch, transformer, optimizer, scheduler=None, device=None, scaler=None):
+def train_step(batch, transformer, optimizer, scheduler=None, device=None):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     transformer.train()
@@ -1005,37 +1006,19 @@ def train_step(batch, transformer, optimizer, scheduler=None, device=None, scale
     )
     enc_dec_mask = enc_dec_pad_mask.expand(-1, 1, tar_inp.size(1), -1)
 
-    # 混合精度训练
-    if scaler is not None:
-        with torch.cuda.amp.autocast():
-            logits, _ = transformer(
-                inp, tar_inp,
-                src_mask=enc_pad_mask,
-                tgt_mask=dec_mask,
-                enc_dec_mask=enc_dec_mask
-            )
-            loss = loss_function(tar_real, logits)
+    logits, _ = transformer(
+        inp, tar_inp,
+        src_mask=enc_pad_mask,
+        tgt_mask=dec_mask,
+        enc_dec_mask=enc_dec_mask
+    )
 
-        optimizer.zero_grad(set_to_none=True)
-        scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(transformer.parameters(), max_norm=1.0)
-        scaler.step(optimizer)
-        scaler.update()
-    else:
-        logits, _ = transformer(
-            inp, tar_inp,
-            src_mask=enc_pad_mask,
-            tgt_mask=dec_mask,
-            enc_dec_mask=enc_dec_mask
-        )
-        loss = loss_function(tar_real, logits)
+    loss = loss_function(tar_real, logits)
 
-        optimizer.zero_grad(set_to_none=True)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(transformer.parameters(), max_norm=1.0)
-        optimizer.step()
-    
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(transformer.parameters(), max_norm=1.0)
+    optimizer.step()
     if scheduler is not None:
         scheduler.step()
 
@@ -1048,7 +1031,7 @@ def train_model(
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         train_loader: torch.utils.data.DataLoader,
-        val_loader: torch.utils.data.DataLoader = None,
+        val_loader: torch.utils.data.DataLoader,
         scheduler=None,
         device: str = None,
         log_every: int = 100,
@@ -1058,30 +1041,11 @@ def train_model(
     os.makedirs(ckpt_dir, exist_ok=True)
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # 多卡训练支持
-    if torch.cuda.is_available():
-        gpu_count = torch.cuda.device_count()
-        print(f"检测到 {gpu_count} 张GPU")
-        if gpu_count > 1:
-            print(f"启用多卡训练，使用 {gpu_count} 张GPU")
-            model = torch.nn.DataParallel(model)
-            device = "cuda"
-        else:
-            print("使用单GPU训练")
-            device = "cuda"
-    else:
-        print("使用CPU训练")
-        device = "cpu"
-    
     model.to(device)
 
     train_loss_meter = AverageMeter("train_loss")
     train_acc_meter = AverageMeter("train_accuracy")
     global_step = 0
-    
-    # 混合精度训练
-    scaler = torch.cuda.amp.GradScaler() if torch.cuda.is_available() else None
 
     for epoch in range(epochs):
         try:
@@ -1092,15 +1056,15 @@ def train_model(
 
             for batch_idx, batch in enumerate(train_loader):
                 loss_val, acc_val = train_step(
-                    batch=batch, transformer=model, optimizer=optimizer, scheduler=scheduler, device=device, scaler=scaler
+                    batch=batch, transformer=model, optimizer=optimizer, scheduler=scheduler, device=device
                 )
                 train_loss_meter.update(loss_val, 1)
                 train_acc_meter.update(acc_val, 1)
 
                 global_step += 1
                 if batch_idx % log_every == 0:
-                    print(
-                        f"Epoch {epoch + 1} Batch {batch_idx} "
+                    logger.info(
+                        f"Epoch {epoch + 1} Batch {batch_idx} global_step {global_step}"
                         f"Loss {train_loss_meter.avg:.4f} Accuracy {train_acc_meter.avg:.4f}"
                     )
                     save_ckpt(
@@ -1113,17 +1077,15 @@ def train_model(
                         tag="latest"
                     )
 
-            # 验证集评估
-            if val_loader is not None:
-                val_loss, val_acc = evaluate_model(model, val_loader, device)
-                print(f"Epoch {epoch + 1} Train Loss {train_loss_meter.avg:.4f} Train Acc {train_acc_meter.avg:.4f}")
-                print(f"Epoch {epoch + 1} Val Loss {val_loss:.4f} Val Acc {val_acc:.4f}")
-            else:
-                print(f"Epoch {epoch + 1} Train Loss {train_loss_meter.avg:.4f} Train Acc {train_acc_meter.avg:.4f}")
-            print(f"Time taken for 1 epoch: {time.time() - start:.2f} secs\n")
+            logger.info(f"Epoch {epoch + 1} Loss {train_loss_meter.avg:.4f} Accuracy {train_acc_meter.avg:.4f}")
+            logger.info(f"Time taken for 1 epoch: {time.time() - start:.2f} secs\n")
+
+            # 每个epoch结束后进行验证集评测
+            validate_loss, validate_acc = evaluate_on_val(model, val_loader, device)
+            logger.info(f"Validation - Epoch {epoch + 1} Loss: {validate_loss:.4f}, Accuracy: {validate_acc:.4f}\n")
 
         except Exception as e:
-            print(f"报错啦!!! 报错信息: {e}")
+            logger.info(f"报错啦!!! 报错信息: {e}")
             save_ckpt(
                 model=model,
                 optimizer=optimizer,
@@ -1132,55 +1094,6 @@ def train_model(
                 step=global_step,
                 tag="error"
             )
-
-
-@torch.no_grad()
-def evaluate_model(model, val_loader, device=None):
-    """评估模型在验证集上的准确率和损失"""
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    model.eval()
-    model.to(device)
-    
-    # 多卡评估支持
-    if torch.cuda.is_available() and torch.cuda.device_count() > 1 and not isinstance(model, torch.nn.DataParallel):
-        model = torch.nn.DataParallel(model)
-    
-    val_loss_meter = AverageMeter("val_loss")
-    val_acc_meter = AverageMeter("val_accuracy")
-    
-    for batch in val_loader:
-        inp = batch["pt_input_ids"].to(device)
-        tar = batch["en_input_ids"].to(device)
-        
-        tar_inp = tar[:, :-1]
-        tar_real = tar[:, 1:]
-        
-        # 创建 masks
-        enc_pad_mask, dec_mask, enc_dec_pad_mask = create_masks(
-            inp, tar_inp, 
-            src_pad_id=pt_tokenizer.pad_token_id, 
-            tgt_pad_id=en_tokenizer.pad_token_id
-        )
-        enc_dec_mask = enc_dec_pad_mask.expand(-1, 1, tar_inp.size(1), -1)
-        
-        # 前向传播
-        logits, _ = model(
-            inp, tar_inp,
-            src_mask=enc_pad_mask,
-            tgt_mask=dec_mask,
-            enc_dec_mask=enc_dec_mask
-        )
-        
-        # 计算损失和准确率
-        loss = loss_function(tar_real, logits)
-        acc = token_accuracy(tar_real, logits, pad_id=en_tokenizer.pad_token_id)
-        
-        val_loss_meter.update(loss.item(), 1)
-        val_acc_meter.update(acc, 1)
-    
-    return val_loss_meter.avg, val_acc_meter.avg
 
 
 @torch.no_grad()
@@ -1242,6 +1155,44 @@ def evaluate(
         attention_weights = attn
 
     return decoder_input.squeeze(0).tolist(), attention_weights
+
+
+@torch.no_grad()
+def evaluate_on_val(model, val_loader, device):
+    model.eval()
+    total_loss = 0
+    total_acc = 0
+    total_count = 0
+
+    for batch in val_loader:
+        inp = batch["pt_input_ids"].to(device)
+        tar = batch["en_input_ids"].to(device)
+
+        tar_inp = tar[:, :-1]
+        tar_real = tar[:, 1:]
+
+        enc_pad_mask, dec_mask, enc_dec_pad_mask = create_masks(
+            inp, tar_inp, src_pad_id=pt_tokenizer.pad_token_id, tgt_pad_id=en_tokenizer.pad_token_id
+        )
+        enc_dec_mask = enc_dec_pad_mask.expand(-1, 1, tar_inp.size(1), -1)
+
+        logits, _ = model(
+            inp, tar_inp,
+            src_mask=enc_pad_mask,
+            tgt_mask=dec_mask,
+            enc_dec_mask=enc_dec_mask
+        )
+
+        loss = loss_function(tar_real, logits)
+        acc = token_accuracy(tar_real, logits, pad_id=en_tokenizer.pad_token_id)
+
+        total_loss += loss.item() * inp.size(0)
+        total_acc += acc * inp.size(0)
+        total_count += inp.size(0)
+
+    avg_loss = total_loss / total_count
+    avg_acc = total_acc / total_count
+    return avg_loss, avg_acc
 
 
 def plot_encoder_decoder_attention(attention, input_sentence, result, layer_name):
@@ -1308,8 +1259,8 @@ def translate(input_sentence, transformer, pt_tokenizer, en_tokenizer,
         skip_special_tokens=True
     )
 
-    print("Input: {}".format(input_sentence))
-    print(f"Predicted translation: {predicted_sentence}")
+    logger.info("Input: {}".format(input_sentence))
+    logger.info(f"Predicted translation: {predicted_sentence}")
 
     # 如果传入了 layer_name，就画注意力图
     if layer_name:
@@ -1336,23 +1287,17 @@ def save_ckpt(model, optimizer, scheduler, epoch, step, ckpt_dir="checkpoints", 
         tag: 保存标识 ("latest", "error", "custom" 等)
     """
     os.makedirs(ckpt_dir, exist_ok=True)
-    
-    # 处理 DataParallel 模型
-    model_state_dict = model.state_dict()
-    if isinstance(model, torch.nn.DataParallel):
-        model_state_dict = model.module.state_dict()
-    
     ckpt = {
         "epoch": epoch,
         "step": step,
-        "model": model_state_dict,
+        "model": model.state_dict(),
         "optim": optimizer.state_dict(),
         "sched": scheduler.state_dict() if scheduler else None,
     }
 
     latest_path = os.path.join(ckpt_dir, "latest.pt")
     torch.save(ckpt, latest_path)
-    # print(f"✅ checkpoint updated: {latest_path}")
+    # logger.info(f"✅ checkpoint updated: {latest_path}")
 
     # 1. 默认保存 latest
     if tag == "latest":
@@ -1366,7 +1311,7 @@ def save_ckpt(model, optimizer, scheduler, epoch, step, ckpt_dir="checkpoints", 
         path = os.path.join(ckpt_dir, f"{tag}_e{epoch}_s{step}.pt")
 
     torch.save(ckpt, path)
-    # print(f"✅ checkpoint saved: {path}")
+    # logger.info(f"✅ checkpoint saved: {path}")
     return path
 
 
@@ -1376,19 +1321,13 @@ def load_ckpt(model, optimizer=None, scheduler=None, ckpt_dir="checkpoints", dev
     """
     latest = os.path.join(ckpt_dir, "latest.pt")
     if not os.path.exists(latest):
-        print("⚠️ No checkpoint found, training from scratch.")
+        logger.info("⚠️ No checkpoint found, training from scratch.")
         return 0, 0
     ckpt = torch.load(latest, map_location=device)
-    
-    # 处理 DataParallel 模型加载
-    if isinstance(model, torch.nn.DataParallel):
-        model.module.load_state_dict(ckpt["model"])
-    else:
-        model.load_state_dict(ckpt["model"])
-    
+    model.load_state_dict(ckpt["model"])
     if optimizer: optimizer.load_state_dict(ckpt["optim"])
     if scheduler and ckpt["sched"]: scheduler.load_state_dict(ckpt["sched"])
-    print(f"✅ checkpoint loaded (epoch={ckpt['epoch']}, step={ckpt['step']})")
+    logger.info(f"✅ checkpoint loaded (epoch={ckpt['epoch']}, step={ckpt['step']})")
     return ckpt["epoch"], ckpt["step"]
 
 
@@ -1396,60 +1335,57 @@ if __name__ == "__main__":
     # 0. 常量定义
 
     # 数据文件地址
-    train_path = "/data3/users/yszhang/mr_project/train_transformers/tensorflow_datasets/ted_pt_en_train.csv"
-    val_path = "/data3/users/yszhang/mr_project/train_transformers/tensorflow_datasets/ted_pt_en_test.csv"
+    train_path = "/data2/workspace/yszhang/train_transformers/tensorflow_datasets/ted_pt_en_train.csv"
+    val_path = "/data2/workspace/yszhang/train_transformers/tensorflow_datasets/ted_pt_en_test.csv"
     special_tokens = ["<s>", "<pad>", "</s>", "<unk>", "<mask>"]
+    checkpoint_dir = './checkpoints-tmp6'
 
     # 构建词表参数
     vocab_size = 2 ** 13  # 词表大小
     min_freq = 2  # 最小词频
     special_tokens = special_tokens  # 特殊符号
-    max_length = 64  # 最大序列长度
+    max_length = 30  # 最大序列长度
 
     # 模型训练超参数
-    batch_size = 64  # 批处理数（单卡）
-    if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-        batch_size = 128  # 多卡训练使用更大批次
-    warmup_steps = 4000  # warmup steps数
-    epochs = 50  # 训练轮数
+    batch_size = 32  # 批处理数
+    # warmup_steps = 4000           # warmup steps数
+    epochs = 600  # 训练轮数
     # learning_rate = 1.0           # 学习率
     # betas = (0.9, 0.98)           # Adam 的一阶矩（梯度均值）；二阶矩（梯度平方的均值）
     # eps = 1e-9                    # 防止除零错误的小常数
-    learning_rate = 1e-3
-    betas = (0.9, 0.999)
+    learning_rate = 5e-4
+    betas = (0.9, 0.98)
     eps = 1e-8
-    weight_decay = 0.01
+    weight_decay = 2e-5  # L2正则化(（权重衰减）) - 0.01
 
     # 模型结构
-    num_layers = 8
-    d_model = 512  # hidden-size
-    dff = 2048
+    # num_layers = 8
+    # d_model = 512                 # hidden-size
+    # dff = 2048
+    # num_heads = 8
+    # dropout_rate = 0.1
+
+    num_layers = 4
+    d_model = 128  # hidden-size
+    dff = 512
     num_heads = 8
-    dropout_rate = 0.1
+    dropout_rate = 0.25
 
     # 1. 检查 PyTorch 环境信息、GPU 状态，以及常用依赖库版本；
     device = check_env()
-    print("实际使用设备:", device)
-    
-    # 多卡训练信息
-    if torch.cuda.is_available():
-        print(f"可用GPU数量: {torch.cuda.device_count()}")
-        print(f"当前使用的GPU: {os.environ.get('CUDA_VISIBLE_DEVICES', 'all')}")
-        for i in range(torch.cuda.device_count()):
-            print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
-            print(f"GPU {i} 显存: {torch.cuda.get_device_properties(i).total_memory / 1024**3:.1f} GB")
+    logger.info("实际使用设备:", device)
 
     # 2. 加载葡萄牙语-英语翻译数据集
     train_dataset, val_dataset = load_translation_dataset(
         train_path=train_path,
         val_path=val_path
     )
-    print("训练集样本数:", len(train_dataset))
-    print("验证集样本数:", len(val_dataset))
+    logger.info("训练集样本数:", len(train_dataset))
+    logger.info("验证集样本数:", len(val_dataset))
 
     # 3. 构建 Tokenizer
     # 3.1 构建 Tokenizer
-    print("开始构建 Tokenizer...")
+    logger.info("开始构建 Tokenizer...")
     pt_tokenizer, en_tokenizer = train_and_load_tokenizers(
         train_dataset=train_dataset,  # 数据集
         pt_key="pt",  # 葡语列名
@@ -1466,7 +1402,7 @@ if __name__ == "__main__":
     test_tokenizers(en_tokenizer=en_tokenizer, pt_tokenizer=pt_tokenizer)
 
     # 3.3 构建 batch data loader
-    print("开始构建 batch data loader...")
+    logger.info("开始构建 batch data loader...")
     train_loader2, val_loader2 = build_dataloaders(
         train_dataset=train_dataset,
         val_dataset=val_dataset,
@@ -1522,8 +1458,15 @@ if __name__ == "__main__":
         eps=eps,
         weight_decay=weight_decay
     )
+
     warmup_steps = int(0.1 * num_training_steps)  # 10% 步数用作 warmup
-    scheduler = CustomizedSchedule(optimizer, d_model=d_model, warmup_steps=warmup_steps)
+    # 获取学习率调度器
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=num_training_steps,
+        num_cycles=0.5,
+    )
 
     # 自定义学习率
     # num_training_steps = len(train_loader2) * epochs
@@ -1540,34 +1483,8 @@ if __name__ == "__main__":
     #     num_training_steps=num_training_steps,
     # )
 
-    test_optimizer = optim.AdamW(
-        model.parameters(),
-        lr=learning_rate,
-        betas=betas,
-        eps=eps,
-        weight_decay=weight_decay
-    )
-
-    test_scheduler = CustomizedSchedule(
-        test_optimizer,
-        d_model=d_model,
-        warmup_steps=warmup_steps
-    )
-
-    # 自定义学习率
-    # test_scheduler = optim.lr_scheduler.CosineAnnealingLR(
-    #     test_optimizer,
-    #     T_max=num_training_steps,
-    #     eta_min=1e-6
-    # )
-    # test_scheduler = get_cosine_schedule_with_warmup(
-    #     test_optimizer,
-    #     num_warmup_steps=warmup_steps,
-    #     num_training_steps=num_training_steps,
-    # )
-
     # 6.2 【测试】 打印自定义学习率曲线
-    plot_customized_lr_curve(test_optimizer, test_scheduler, total_steps=num_training_steps,
+    plot_customized_lr_curve(optimizer, scheduler, total_steps=num_training_steps,
                              label=f"d_model={d_model}, warmup={warmup_steps}")
 
     ##############################【Test - optimizer | scheduler 】##############################
@@ -1578,9 +1495,7 @@ if __name__ == "__main__":
     loss_object = nn.CrossEntropyLoss(reduction="none", ignore_index=PAD_ID_TGT)
 
     # 8. 训练模型 && checkpoints
-    checkpoint_dir = './checkpoints'
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt.pt")
-
+    logger.info(f"learning_rate:{learning_rate}")
     if not os.path.exists(checkpoint_dir):
         os.mkdir(checkpoint_dir)
 
@@ -1589,7 +1504,7 @@ if __name__ == "__main__":
             model=model,
             optimizer=optimizer,
             train_loader=train_loader2,
-            val_loader=val_loader2,  # 添加验证集
+            val_loader=val_loader2,
             scheduler=scheduler,  # Noam 调度
             device=device,  # 自动选 GPU/CPU
             log_every=100,
@@ -1598,6 +1513,5 @@ if __name__ == "__main__":
         )
     else:
         start_epoch, global_step = load_ckpt(model, optimizer, scheduler, device=device)
-        print("Checkpoint loaded successfully!")
+        logger.info("Checkpoint loaded successfully!")
 
-    # 9.
