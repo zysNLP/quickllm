@@ -142,6 +142,7 @@ def build_dataloaders(
                 kept += 1
             else:
                 skipped += 1
+        # [filter] kept=38790, skipped=12996, max_length=30
         logger.info(f"[filter] kept={kept}, skipped={skipped}, max_length={max_len}")
         return pairs
 
@@ -162,19 +163,82 @@ def build_dataloaders(
 
     # 4) Collate 函数（动态 padding）
     def collate_padded(batch, pad_id_pt: int, pad_id_en: int):
+        """
+        数据整理函数，用于DataLoader的collate_fn，将一批样本动态填充到相同长度
+
+        参数:
+            batch: 一批样本，每个样本是包含'pt_input_ids'和'en_input_ids'的字典
+            pad_id_pt: 葡萄牙语的填充token id
+            pad_id_en: 英语的填充token id
+
+        返回:
+            包含四个张量的字典:
+            - pt_input_ids: 葡萄牙语输入ID，形状(batch_size, max_pt_len)
+            - pt_attention_mask: 葡萄牙语注意力掩码，形状(batch_size, max_pt_len)
+            - en_input_ids: 英语输入ID，形状(batch_size, max_en_len)
+            - en_attention_mask: 英语注意力掩码，形状(batch_size, max_en_len)
+
+        示例:
+            输入batch = [
+                {'pt_input_ids': [1, 2, 3], 'en_input_ids': [4, 5]},
+                {'pt_input_ids': [6, 7], 'en_input_ids': [8, 9, 10, 11]}
+            ]
+
+            输出:
+            {
+                'pt_input_ids': [[1, 2, 3, 0], [6, 7, 0, 0]],      # 葡萄牙语填充
+                'pt_attention_mask': [[1, 1, 1, 0], [1, 1, 0, 0]], # 葡萄牙语掩码
+                'en_input_ids': [[4, 5, 0, 0], [8, 9, 10, 11]],    # 英语填充
+                'en_attention_mask': [[1, 1, 0, 0], [1, 1, 1, 1]]  # 英语掩码
+            }
+        """
         def pad_block(seqs, pad_value):
+            """
+            将变长序列填充到相同长度，并生成对应的注意力掩码
+
+            参数:
+                seqs: 序列列表，每个序列是整数列表
+                pad_value: 填充值（通常是tokenizer.pad_token_id）
+
+            返回:
+                padded_tensor: 填充后的张量，形状为 (batch_size, max_len)
+                attention_mask: 注意力掩码，1表示有效token，0表示填充位置
+
+            示例:
+                输入: [[1, 2, 3], [4, 5]], pad_value=0
+                输出:
+                    padded_tensor = [[1, 2, 3],
+                                    [4, 5, 0]]
+                    attention_mask = [[1, 1, 1],
+                                     [1, 1, 0]]
+            """
+            # 找到批次中最长的序列长度
             max_len = max(len(s) for s in seqs)
+
+            # 创建填充张量，用pad_value填充所有位置
             out = torch.full((len(seqs), max_len), pad_value, dtype=torch.long)
+            # 创建注意力掩码，初始为0（表示填充位置）
             attn = torch.zeros((len(seqs), max_len), dtype=torch.long)
+
+            # 遍历每个序列，填充实际数据并设置注意力掩码
             for i, s in enumerate(seqs):
-                L = len(s)
-                out[i, :L] = torch.tensor(s, dtype=torch.long)
-                attn[i, :L] = 1
+                L = len(s)  # 当前序列的实际长度
+                out[i, :L] = torch.tensor(s, dtype=torch.long)  # 填充实际token id
+                attn[i, :L] = 1  # 前L个位置设为1（有效token）
+
             return out, attn
 
         pt_ids_list = [ex["pt_input_ids"] for ex in batch]
+        # en_ids_list[1] = [0, 6295, 268, 1167, 464, 334, 861, 291, 268, 406, 464, 822, 286, 728, 1223, 1863, 267, 2]
         en_ids_list = [ex["en_input_ids"] for ex in batch]
+
         pt_input_ids, pt_attention_mask = pad_block(pt_ids_list, pt_tokenizer.pad_token_id)
+
+        # en_input_ids[1] = tensor([   0, 6295,  268, 1167,  464,  334,  861,  291,  268,  406,  464,  822,
+        #          286,  728, 1223, 1863,  267,    2,    1,    1,    1,    1,    1,    1,
+        #            1,    1,    1,    1])
+        # en_attention_mask[1] = tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+        #         0, 0, 0, 0])
         en_input_ids, en_attention_mask = pad_block(en_ids_list, en_tokenizer.pad_token_id)
 
         return {
@@ -295,3 +359,66 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ DataLoader构建失败: {e}")
         print("💡 请检查数据文件路径是否正确")
+
+"""
+(train_transformers) root@iv-ydg6wcq3ggay8n6dmn75:/data2/workspace/yszhang/train_transformers/run_by_steps/run_by_steps# python step4_dataloader.py 
+============================================================
+Step 4: 构建和测试DataLoader
+============================================================
+🔧 DataLoader参数:
+   批大小: 32
+   最大序列长度: 30
+
+📁 加载数据集...
+
+🔨 构建 Tokenizer...
+[00:00:00] Pre-processing sequences       ██████████████████████████████████████████████████████████████████████████████ 0        /        0
+[00:00:00] Tokenize words                 ██████████████████████████████████████████████████████████████████████████████ 38341    /    38341
+[00:00:00] Count pairs                    ██████████████████████████████████████████████████████████████████████████████ 38341    /    38341
+[00:00:02] Compute merges                 ██████████████████████████████████████████████████████████████████████████████ 7931     /     7931
+[00:00:00] Pre-processing sequences       ██████████████████████████████████████████████████████████████████████████████ 0        /        0
+[00:00:00] Tokenize words                 ██████████████████████████████████████████████████████████████████████████████ 27827    /    27827
+[00:00:00] Count pairs                    ██████████████████████████████████████████████████████████████████████████████ 27827    /    27827
+[00:00:02] Compute merges                 ██████████████████████████████████████████████████████████████████████████████ 7931     /     7931
+
+🔨 构建 DataLoader...
+Token indices sequence length is longer than the specified maximum sequence length for this model (38 > 30). Running this sequence through the model will result in indexing errors
+Token indices sequence length is longer than the specified maximum sequence length for this model (31 > 30). Running this sequence through the model will result in indexing errors
+2025-10-04 20:13:10.172 | INFO     | __main__:build_filtered_pairs:138 - [filter] kept=38790, skipped=12996, max_length=30
+2025-10-04 20:13:10.173 | INFO     | __main__:build_filtered_pairs:139 - ex = {'pt': 'os meus alunos têm problemas , problemas sociais , emocionais e económicos , que vocês nem podem imaginar .', 'en': 'my students have problems : social , emotional and economic problems you could never imagine .'}
+2025-10-04 20:13:10.173 | INFO     | __main__:build_filtered_pairs:140 - pairs[1] = ([0, 73, 480, 1218, 1636, 262, 2350, 267, 512, 1636, 262, 1614, 5644, 356, 4592, 267, 282, 311, 262, 320, 594, 422, 84, 445, 268, 2], [0, 477, 468, 309, 2415, 2499, 1846, 268, 309, 577, 688, 1106, 266, 425, 4672, 295, 2888, 268, 566, 317, 365, 270, 275, 718, 437, 267, 2])
+2025-10-04 20:13:10.377 | INFO     | __main__:build_filtered_pairs:138 - [filter] kept=942, skipped=252, max_length=30
+2025-10-04 20:13:10.377 | INFO     | __main__:build_filtered_pairs:139 - ex = {'pt': 'mas , como todos os cientistas , ela sabia , que , para deixar a sua marca , o que precisava fazer era encontrar um problema difícil e resolvê-lo .', 'en': 'but like every scientist , she appreciated that to make her mark , what she needed to do was find a hard problem and solve it .'}
+2025-10-04 20:13:10.377 | INFO     | __main__:build_filtered_pairs:140 - pairs[1] = ([0, 88, 1290, 304, 740, 4916, 304, 6351, 430, 290, 335, 430, 390, 2], [0, 72, 341, 352, 2051, 2993, 286, 6266, 377, 2])
+
+✅ DataLoader构建完成！
+📊 训练集批次数: 1213
+📊 验证集批次数: 30
+
+🧪 测试 DataLoader...
+2025-10-04 20:13:10.399 | INFO     | __main__:collate_padded:170 - en_ids_list[1] = [0, 6295, 268, 1167, 464, 334, 861, 291, 268, 406, 464, 822, 286, 728, 1223, 1863, 267, 2]
+2025-10-04 20:13:10.402 | INFO     | __main__:collate_padded:173 - en_input_ids[1] = tensor([   0, 6295,  268, 1167,  464,  334,  861,  291,  268,  406,  464,  822,
+         286,  728, 1223, 1863,  267,    2,    1,    1,    1,    1,    1,    1,
+           1,    1,    1,    1])
+2025-10-04 20:13:10.402 | INFO     | __main__:collate_padded:174 - en_attention_mask[1] = tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0])
+2025-10-04 20:13:10.402 | INFO     | __main__:test_dataloaders:211 - === Train Loader Batch Shapes ===
+2025-10-04 20:13:10.403 | INFO     | __main__:test_dataloaders:213 - pt_input_ids         (32, 29)
+2025-10-04 20:13:10.403 | INFO     | __main__:test_dataloaders:213 - pt_attention_mask    (32, 29)
+2025-10-04 20:13:10.403 | INFO     | __main__:test_dataloaders:213 - en_input_ids         (32, 28)
+2025-10-04 20:13:10.403 | INFO     | __main__:test_dataloaders:213 - en_attention_mask    (32, 28)
+2025-10-04 20:13:10.403 | INFO     | __main__:test_dataloaders:217 - 
+=== Validation Loader Example ===
+2025-10-04 20:13:10.403 | INFO     | __main__:collate_padded:170 - en_ids_list[1] = [0, 72, 341, 352, 2051, 2993, 286, 6266, 377, 2]
+2025-10-04 20:13:10.404 | INFO     | __main__:collate_padded:173 - en_input_ids[1] = tensor([   0,   72,  341,  352, 2051, 2993,  286, 6266,  377,    2,    1,    1,
+           1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+           1,    1,    1])
+2025-10-04 20:13:10.404 | INFO     | __main__:collate_padded:174 - en_attention_mask[1] = tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0])
+2025-10-04 20:13:10.404 | INFO     | __main__:test_dataloaders:219 - pt_input_ids:     
+2025-10-04 20:13:10.404 | INFO     | __main__:test_dataloaders:220 - pt_attention_mask:
+
+✅ DataLoader测试完成！
+(train_transformers) root@iv-ydg6wcq3ggay8n6dmn75:/data2/workspace/yszhang/train_transformers/run_by_steps/run_by_steps# 
+(train_transformers) root@iv-ydg6wcq3ggay8n6dmn75:/data2/workspace/yszhang/train_transformers/run_by_steps/run_by_steps# 
+"""
