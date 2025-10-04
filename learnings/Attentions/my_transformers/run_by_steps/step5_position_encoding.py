@@ -99,7 +99,7 @@ def plot_position_embedding(position_embedding: torch.Tensor):
     plt.tight_layout()
 
     #plt.show()
-    plt.savefig('step5_positional_encoding.png', dpi=300, bbox_inches='tight')
+    plt.savefig('images/step5_positional_encoding.png', dpi=300, bbox_inches='tight')
 
 
 def analyze_position_encoding(position_embedding: torch.Tensor):

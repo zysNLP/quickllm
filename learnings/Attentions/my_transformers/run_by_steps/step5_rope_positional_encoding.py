@@ -163,7 +163,7 @@ def plot_rope_embedding(rope_embedding: torch.Tensor):
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig('step5_rope_positional_encoding1.png', dpi=300, bbox_inches='tight')
+    plt.savefig('images/step5_rope_positional_encoding1.png', dpi=300, bbox_inches='tight')
 
 
 def plot_rotation_effect(rotation_data):
@@ -210,7 +210,7 @@ def plot_rotation_effect(rotation_data):
 
     plt.suptitle('RoPE Rotation Effect on Different Positions')
     plt.tight_layout()
-    plt.savefig('step5_rope_positional_encoding2.png', dpi=300, bbox_inches='tight')
+    plt.savefig('images/step5_rope_positional_encoding2.png', dpi=300, bbox_inches='tight')
 
 
 def analyze_rope_encoding(rope_embedding: torch.Tensor):
