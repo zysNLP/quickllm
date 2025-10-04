@@ -25,3 +25,4 @@ tensorflow-datasets>=4.9.0
 
 # Standard library dependencies (included with Python)
 # os, sys, time, math, pathlib, datetime - no additional packages needed
+loguru>=0.6.0
