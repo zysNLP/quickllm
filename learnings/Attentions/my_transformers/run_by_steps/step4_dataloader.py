@@ -130,7 +130,11 @@ def build_dataloaders(
     # 2) 构造已过滤的样本对
     def build_filtered_pairs(hf_split, pt_tok, en_tok, max_len: int):
         pairs, kept, skipped = [], 0, 0
+        # pairs[1] = ([0, 88, 1290, 304, 740, 4916, 304, 6351, 430, 290, 335, 430, 390, 2], [0, 72, 341, 352, 2051, 2993, 286, 6266, 377, 2])
         for ex in hf_split:
+            """ex = {'pt': 'os meus alunos têm problemas , problemas sociais , emocionais e económicos , que vocês nem podem imaginar .', 
+                     'en': 'my students have problems : social , emotional and economic problems you could never imagine .'}
+            """
             pt_ids = encode_with_bos_eos(pt_tok, ex["pt"])
             en_ids = encode_with_bos_eos(en_tok, ex["en"])
             if len(pt_ids) <= max_len and len(en_ids) <= max_len:
@@ -146,9 +150,11 @@ def build_dataloaders(
 
     # 3) Dataset 类
     class PairsDataset(Dataset):
-        def __init__(self, pairs): self.pairs = pairs
+        def __init__(self, pairs):
+            self.pairs = pairs
 
-        def __len__(self): return len(self.pairs)
+        def __len__(self):
+            return len(self.pairs)
 
         def __getitem__(self, idx):
             pt_ids, en_ids = self.pairs[idx]

@@ -75,3 +75,44 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ 数据加载失败: {e}")
         print("💡 请检查数据文件路径是否正确")
+
+"""
+(train_transformers) root@iv-ydg6wcq3ggay8n6dmn75:/data2/workspace/yszhang/train_transformers/run_by_steps/run_by_steps# python step2_data_loading.py 
+============================================================
+Step 2: 数据加载和数据集信息
+============================================================
+📁 训练集路径: /data2/workspace/yszhang/train_transformers/tensorflow_datasets/ted_pt_en_train.csv
+📁 验证集路径: /data2/workspace/yszhang/train_transformers/tensorflow_datasets/ted_pt_en_test.csv
+2025-10-04 17:41:07.332 | INFO     | __main__:load_translation_dataset:23 - 开始加载数据...
+2025-10-04 17:41:10.454 | INFO     | __main__:load_translation_dataset:34 - 数据集类型: <class 'datasets.dataset_dict.DatasetDict'>
+2025-10-04 17:41:10.454 | INFO     | __main__:load_translation_dataset:35 - DatasetDict({
+    train: Dataset({
+        features: ['pt', 'en'],
+        num_rows: 51786
+    })
+    validation: Dataset({
+        features: ['pt', 'en'],
+        num_rows: 1194
+    })
+})
+2025-10-04 17:41:10.455 | INFO     | __main__:load_translation_dataset:39 - 示例数据 -> pt: pt | en: en
+
+✅ 数据加载完成！
+📊 训练集样本数: 51786
+📊 验证集样本数: 1194
+
+📝 数据集样本预览:
+  样本 1:
+    葡萄牙语: pt
+    英语: en
+
+  样本 2:
+    葡萄牙语: e quando melhoramos a procura , tiramos a única vantagem da impressão , que é a serendipidade .
+    英语: and when you improve searchability , you actually take away the one advantage of print , which is serendipity .
+
+  样本 3:
+    葡萄牙语: mas e se estes fatores fossem ativos ?
+    英语: but what if it were active ?
+
+(train_transformers) root@iv-ydg6wcq3ggay8n6dmn75:/data2/workspace/yszhang/train_transformers/run_by_steps/run_by_steps# 
+"""
