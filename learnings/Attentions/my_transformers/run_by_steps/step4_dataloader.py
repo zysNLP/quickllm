@@ -32,12 +32,15 @@ def train_and_load_tokenizers(
     en_key="en",
     vocab_size=2 ** 13,
     min_freq=2,
-    special_tokens=["<s>", "<pad>", "</s>", "<unk>", "<mask>"],
+    special_tokens=None,
     save_dir_pt="tok_pt",
     save_dir_en="tok_en",
     max_length=1024
 ):
     """训练并加载tokenizer"""
+    if special_tokens is None:
+        special_tokens = ["<s>", "<pad>", "</s>", "<unk>", "<mask>"]
+
     def iter_lang(ds, key):
         for ex in ds:
             txt = ex[key]
