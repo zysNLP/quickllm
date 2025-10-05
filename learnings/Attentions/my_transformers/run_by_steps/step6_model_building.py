@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import matplotlib.pyplot as plt
+from loguru import logger
 
 # 检测可用设备（优先GPU，其次MPS，最后CPU）
 if torch.cuda.is_available():
@@ -65,8 +66,47 @@ def create_padding_mask(batch_data: torch.Tensor, pad_token_id: int = 0):
 def create_look_ahead_mask(size: int):
     """生成Look-ahead mask (上三角矩阵)"""
     ones = torch.ones((size, size))
+    # 参数 diagonal 控制对角线的偏移量：
+    # - diagonal=0 表示主对角线及其以上为1
+    # - diagonal=1 表示主对角线以上（不含主对角线）为1
+    # 这里用 diagonal=1，生成主对角线以上为1，其余为0的上三角矩阵，用于屏蔽未来信息
     mask = torch.triu(ones, diagonal=1)
     return mask
+
+def create_masks(
+    inp_ids: torch.Tensor,  # [B, L_src]
+    tar_ids: torch.Tensor,  # [B, L_tgt] —— 通常是 decoder 输入（已左移）
+    src_pad_id: int = 0,
+    tgt_pad_id: int = 0,
+):
+    """
+    返回:
+      encoder_padding_mask         : [B, 1, 1, L_src]  (给 EncoderLayer self-attn)
+      decoder_mask (LA + padding)  : [B, 1, L_tgt, L_tgt]  (给 DecoderLayer 自注意力)
+      encoder_decoder_padding_mask : [B, 1, 1, L_src]  (给 DecoderLayer cross-attn)
+    语义:
+      1 = 屏蔽（masked），0 = 保留
+    """
+    # 1) Encoder 端 padding mask
+    encoder_padding_mask = create_padding_mask(inp_ids, pad_token_id=src_pad_id)  # [B,1,1,L_src]
+    encoder_decoder_padding_mask = create_padding_mask(inp_ids, pad_token_id=src_pad_id)  # [B,1,1,L_src]
+
+    # 2) Decoder 端 look-ahead + padding 合并
+    L_tgt = tar_ids.size(1)
+
+    # [L_tgt, L_tgt] → [1,1,L_tgt,L_tgt]，放到与输入相同 device/dtype
+    look_ahead = create_look_ahead_mask(L_tgt).to(
+        device=tar_ids.device, dtype=encoder_padding_mask.dtype
+    ).unsqueeze(0).unsqueeze(1)  # [1,1,L_tgt,L_tgt]
+
+    # 目标端 padding： [B,1,1,L_tgt] → 扩到 [B,1,L_tgt,L_tgt]
+    decoder_padding_mask = create_padding_mask(tar_ids, pad_token_id=tgt_pad_id)  # [B,1,1,L_tgt]
+    decoder_padding_mask = decoder_padding_mask.expand(-1, -1, L_tgt, -1)  # [B,1,L_tgt,L_tgt]
+
+    # 合并（任一为 1 即屏蔽）
+    decoder_mask = torch.maximum(decoder_padding_mask, look_ahead)  # [B,1,L_tgt,L_tgt]
+
+    return encoder_padding_mask, decoder_mask, encoder_decoder_padding_mask
 
 def scaled_dot_product_attention(q, k, v, mask=None):
     """缩放点积注意力机制"""
@@ -365,6 +405,16 @@ class Transformer(nn.Module):
         self.final_layer = nn.Linear(d_model, target_vocab_size)
 
     def forward(self, inp_ids, tgt_ids, src_mask=None, tgt_mask=None, enc_dec_mask=None):
+        """
+        inp_ids: [B, L_src]  源端 token ids
+        tgt_ids: [B, L_tgt]  目标端 token ids（训练时通常是 shift 后的 decoder 输入）
+        src_mask:    [B, 1, L_src, L_src] 或 [B, L_src, L_src]（1=屏蔽）
+        tgt_mask:    [B, 1, L_tgt, L_tgt] 或 [B, L_tgt, L_tgt]（look-ahead+padding）
+        enc_dec_mask:[B, 1, L_tgt, L_src] 或 [B, L_tgt, L_src]
+        返回:
+          logits: [B, L_tgt, target_vocab_size]
+          attention_weights: dict，包含每层的 attn
+        """
         enc_out = self.encoder_model(inp_ids, src_mask=src_mask)  # [B, L_src, D]
         dec_out, attention_weights = self.decoder_model(
             tgt_ids, enc_out, tgt_mask=tgt_mask, enc_dec_mask=enc_dec_mask
@@ -428,7 +478,7 @@ if __name__ == "__main__":
         print(f"   总参数数量: {total_params:,}")
         print(f"   可训练参数: {total_params:,}")
 
-        # 3. 测试模型前向传播
+        # 3. 测试模型前向传播（对齐 train.py/step4 的真实 mask 逻辑）
         print(f"\n🧪 测试模型前向传播...")
         batch_size = 2
         src_len = 10
@@ -441,9 +491,32 @@ if __name__ == "__main__":
         print(f"   输入形状: {inp_ids.shape}")
         print(f"   目标形状: {tgt_ids.shape}")
         
-        # 前向传播
+        # 构造与真实训练一致的 mask
+        # decoder 输入/输出拆分（teacher forcing）
+        tar_inp = tgt_ids[:, :-1]
+        tar_real = tgt_ids[:, 1:]
+
+        # 根据 pad_id 构造三类 mask
+        SRC_PAD_ID = 0
+        TGT_PAD_ID = 0
+        enc_pad_mask, dec_mask, enc_dec_pad_mask = create_masks(
+            inp_ids, tar_inp, src_pad_id=SRC_PAD_ID, tgt_pad_id=TGT_PAD_ID
+        )
+        print(f"enc_pad_mask: {enc_pad_mask.shape}")
+        print(f"dec_mask: {dec_mask.shape}")
+        print(f"enc_dec_pad_mask: {enc_dec_pad_mask.shape}")
+        
+        # 将 enc_dec_pad_mask 扩展为 [B,1,L_tgt,L_src]
+        enc_dec_mask = enc_dec_pad_mask.expand(-1, 1, tar_inp.size(1), -1)
+
+        # 前向传播（显式传入 mask）
         with torch.no_grad():
-            logits, attention_weights = model(inp_ids, tgt_ids)
+            logits, attention_weights = model(
+                inp_ids, tar_inp,
+                src_mask=enc_pad_mask,
+                tgt_mask=dec_mask,
+                enc_dec_mask=enc_dec_mask
+            )
         
         print(f"   输出logits形状: {logits.shape}")
         print(f"   注意力权重数量: {len(attention_weights)}")

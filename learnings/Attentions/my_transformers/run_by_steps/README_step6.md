@@ -1,3 +1,5 @@
+
+
 # Step 6: Transformer 模型构建
 
 ## 概述
@@ -241,3 +243,66 @@ python step6_model_building.py
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) - Transformer 原始论文
 - [The Illustrated Transformer](http://jalammar.github.io/illustrated-transformer/) - 可视化解释
 - [Transformer 详解](https://zhuanlan.zhihu.com/p/338817680) - 中文详细解析
+
+
+## 附：为什么需要三个 mask？如何根据输入形状生成？
+
+下面结合本步骤脚本中的实际张量形状进行说明。示例中：
+- 输入（源端）形状: `inp_ids = torch.Size([2, 10])`，其中 `B=2`、`L_src=10`
+- 目标（解码端）形状: `tgt_ids = torch.Size([2, 8])`，其中 `B=2`、`L_tgt_raw=8`
+- 注意：训练时会使用 Teacher Forcing，将目标序列左移一位作为解码器输入 `tar_inp = tgt_ids[:, :-1]`，因此 `L_tgt = 7`
+- `create_masks(inp_ids, tar_inp, src_pad_id=0, tgt_pad_id=0)` 返回三个张量：
+  1) `encoder_padding_mask: [B, 1, 1, L_src] = [2, 1, 1, 10]`
+  2) `decoder_mask:         [B, 1, L_tgt, L_tgt] = [2, 1, 7, 7]`
+  3) `encoder_decoder_padding_mask: [B, 1, 1, L_src] = [2, 1, 1, 10]`
+
+注意：在解码器的交叉注意力中，第三个 mask 会被扩展为 `[B, 1, L_tgt, L_src] = [2, 1, 7, 10]` 以与注意力分数张量对齐（此处的 `L_tgt` 指 `tar_inp` 的长度 7）。
+
+### 这三个 mask 是如何生成的？
+
+1) Encoder Padding Mask（编码器填充掩码）
+- 目的：在编码器自注意力中忽略源序列中的 padding 位置
+- 生成：
+  - 先通过 `create_padding_mask(inp_ids, pad_token_id=src_pad_id)` 得到形状 `[B, 1, 1, L_src]`
+  - 其中 mask 值为 1 的地方表示“屏蔽/忽略”，0 表示“保留”
+
+2) Decoder Mask（解码器合并掩码 = Look-ahead + Padding）
+- 目的：
+  - Look-ahead 部分防止解码器在第 t 个位置看到 t 之后的“未来”信息（避免信息泄露）
+  - Padding 部分忽略目标序列中的 padding 位置
+- 生成：
+  - `look_ahead = create_look_ahead_mask(L_tgt)` 得到形状 `[L_tgt, L_tgt]`（此处 `L_tgt=7`）
+    - 实现为 `torch.triu(torch.ones(L_tgt, L_tgt), diagonal=1)`，对角线上方为 1，其余为 0
+    - 语义：第 i 行第 j 列，若 j>i（未来位置）则置 1 表示屏蔽
+  - `decoder_padding_mask = create_padding_mask(tar_ids, pad_token_id=tgt_pad_id)` 得到 `[B, 1, 1, L_tgt]`
+  - 将其扩展为 `[B, 1, L_tgt, L_tgt]`，与 look-ahead 对齐
+  - 最后合并：`decoder_mask = max(decoder_padding_mask, look_ahead)` → `[B, 1, L_tgt, L_tgt]`
+
+3) Encoder-Decoder Padding Mask（交叉注意力掩码）
+- 目的：在解码器的交叉注意力中，让每个目标位置仅关注源序列的有效（非 padding）位置
+- 生成：
+  - 先用 `create_padding_mask(inp_ids, pad_token_id=src_pad_id)` 得到 `[B, 1, 1, L_src]`
+  - 在交叉注意力计算前扩展为 `[B, 1, L_tgt, L_src]`，使 batch 内每个目标位置都能屏蔽源端的 padding 位置
+
+### 为什么要这么生成？（与注意力计算的形状对齐）
+
+以缩放点积注意力为例：注意力 logits 的形状通常为 `[B, num_heads, L_q, L_k]`。mask 需要能按广播规则与该形状对齐，因此：
+- 编码器自注意力：`L_q = L_k = L_src`，故使用 `[B, 1, 1, L_src]`，可广播为 `[B, H, L_src, L_src]`
+- 解码器自注意力：`L_q = L_k = L_tgt`，且需要 look-ahead，故使用 `[B, 1, L_tgt, L_tgt]`
+- 交叉注意力：`L_q = L_tgt, L_k = L_src`，故最终需要 `[B, 1, L_tgt, L_src]`
+
+### 掩码的数值约定与作用位置
+
+- 数值约定：本项目中约定 1 表示屏蔽（masked），0 表示保留（keep）
+- 作用位置：在注意力 logits 上用 `masked_fill(mask == 1, -1e9)` 将被屏蔽位置的分数置为极小值，softmax 后权重趋近 0，从而不会对输出产生贡献
+
+### 与示例形状的对应关系（B=2, L_src=10, L_tgt_raw=8, L_tgt=7）
+
+- `encoder_padding_mask`: `[2, 1, 1, 10]` → 编码器自注意力屏蔽源端 padding
+- `decoder_mask`: `[2, 1, 7, 7]` → 解码器自注意力同时实现 look-ahead 与 padding 屏蔽
+- `encoder_decoder_padding_mask` 扩展后：`[2, 1, 7, 10]` → 解码器交叉注意力屏蔽源端 padding
+
+这样设计能确保：
+1. 模型不会把概率“浪费”在 padding 上
+2. 解码阶段不泄露未来信息（保证自回归训练/推理的一致性）
+3. 三类注意力（enc self-attn、dec self-attn、cross-attn）都能拿到形状匹配的掩码张量
