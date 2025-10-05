@@ -11,10 +11,21 @@ import torch.nn.functional as F
 import math
 import matplotlib.pyplot as plt
 
-# 设置GPU设备
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+# 检测可用设备（优先GPU，其次MPS，最后CPU）
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("🎯 使用GPU加速")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+    print("🍎 使用MPS加速（Mac）")
+else:
+    device = torch.device("cpu")
+    print("⚙️ 使用CPU")
 
-def get_position_embedding(sentence_length: int, d_model: int, device="cuda", dtype=torch.float32):
+print(f"使用设备: {device}")
+
+
+def get_position_embedding(sentence_length: int, d_model: int, device=None, dtype=torch.float32):
     """生成位置编码"""
     def get_angles(pos: torch.Tensor, i: torch.Tensor, d_model: int):
         angle_rates = 1.0 / torch.pow(
@@ -182,7 +193,7 @@ class EncoderLayer(nn.Module):
 
 class DecoderLayer(nn.Module):
     """解码器层"""
-    
+
     def __init__(self, d_model: int, num_heads: int, dff: int, rate: float = 0.1):
         super().__init__()
         self.mha1 = MultiHeadAttention(d_model, num_heads)  # masked self-attn
@@ -237,7 +248,7 @@ class EncoderModel(nn.Module):
         self.embedding = nn.Embedding(input_vocab_size, d_model, padding_idx=padding_idx)
 
         # 位置编码：注册为 buffer（不参与训练/优化器）
-        pe = get_position_embedding(max_length, d_model)
+        pe = get_position_embedding(max_length, d_model, device="cpu")  # 在CPU上创建
         self.register_buffer("position_embedding", pe, persistent=False)
 
         self.dropout = nn.Dropout(rate)
@@ -260,7 +271,7 @@ class EncoderModel(nn.Module):
         # 缩放：使 embedding 的尺度与位置编码相近（论文做法）
         x = x * self.scale
         # 加位置编码（按实际序列长度切片）
-        x = x + self.position_embedding[:, :L, :]
+        x = x + self.position_embedding[:, :L, :].to(x.device)  # 确保位置编码在正确的设备上
 
         x = self.dropout(x)
 
@@ -285,7 +296,7 @@ class DecoderModel(nn.Module):
         self.embedding = nn.Embedding(target_vocab_size, d_model, padding_idx=padding_idx)
 
         # 位置编码（注册为 buffer，不参与训练）
-        pe = get_position_embedding(max_length, d_model)
+        pe = get_position_embedding(max_length, d_model, device="cpu")  # 在CPU上创建
         self.register_buffer("position_embedding", pe, persistent=False)
 
         self.dropout = nn.Dropout(rate)
@@ -310,7 +321,7 @@ class DecoderModel(nn.Module):
 
         # (B, Lt, D)
         x = self.embedding(x) * self.scale
-        x = x + self.position_embedding[:, :Lt, :]
+        x = x + self.position_embedding[:, :Lt, :].to(x.device)  # 确保位置编码在正确的设备上
         x = self.dropout(x)
 
         attention_weights = {}
@@ -407,8 +418,8 @@ if __name__ == "__main__":
             rate=dropout_rate,
             src_padding_idx=0,  # 假设pad_token_id=0
             tgt_padding_idx=0,
-        )
-        
+        ).to(device)  # 将模型移动到正确的设备
+
         print(f"✅ Transformer模型构建完成！")
         
         # 2. 统计模型参数
@@ -416,17 +427,17 @@ if __name__ == "__main__":
         print(f"📊 模型参数统计:")
         print(f"   总参数数量: {total_params:,}")
         print(f"   可训练参数: {total_params:,}")
-        
+
         # 3. 测试模型前向传播
         print(f"\n🧪 测试模型前向传播...")
         batch_size = 2
         src_len = 10
         tgt_len = 8
-        
-        # 创建示例输入
-        inp_ids = torch.randint(0, input_vocab_size, (batch_size, src_len))
-        tgt_ids = torch.randint(0, target_vocab_size, (batch_size, tgt_len))
-        
+
+        # 创建示例输入（在正确的设备上）
+        inp_ids = torch.randint(0, input_vocab_size, (batch_size, src_len)).to(device)
+        tgt_ids = torch.randint(0, target_vocab_size, (batch_size, tgt_len)).to(device)
+
         print(f"   输入形状: {inp_ids.shape}")
         print(f"   目标形状: {tgt_ids.shape}")
         
@@ -445,4 +456,7 @@ if __name__ == "__main__":
         
     except Exception as e:
         print(f"❌ 模型构建失败: {e}")
+        import traceback
+
+        traceback.print_exc()
         print("💡 请检查参数设置是否正确")
