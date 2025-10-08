@@ -138,6 +138,7 @@ class MultiHeadAttention(nn.Module):
         self.d_model = d_model
         self.num_heads = num_heads
         self.depth = d_model // num_heads  # 每个头的维度 Dh
+        assert self.depth % 2 == 0, "RoPE 需要每个头的维度为偶数 (head_dim % 2 == 0)"
 
         # 对应 Keras 的 Dense(d_model)
         self.WQ = nn.Linear(d_model, d_model, bias=True)

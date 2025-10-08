@@ -25,7 +25,7 @@ def get_device():
     return device
 
 
-class RoPEVisualizer:
+class RoPEPositionalEncoding:
     def __init__(self, max_len, d_model, nums_head=8, batch_size=1, device=None):
         self.max_len = max_len
         self.d_model = d_model
@@ -296,7 +296,7 @@ if __name__ == "__main__":
 
         # 1. 初始化RoPE可视化器
         print(f"\n🔨 初始化RoPE可视化器...")
-        rope_viz = RoPEVisualizer(
+        rope_viz = RoPEPositionalEncoding(
             max_len=max_length,
             d_model=d_model,
             nums_head=nums_head,
