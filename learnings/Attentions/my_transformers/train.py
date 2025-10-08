@@ -27,6 +27,19 @@ from loguru import logger
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
+def get_device():
+    """自动检测可用设备"""
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"✅ 使用 GPU: {torch.cuda.get_device_name()}")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")  # Apple Silicon GPU
+        print("✅ 使用 Apple Silicon GPU (MPS)")
+    else:
+        device = torch.device("cpu")
+        print("✅ 使用 CPU")
+    return device
+
 def check_env():
     """
     检查 PyTorch 环境信息、GPU 状态，以及常用依赖库版本。
@@ -378,6 +391,95 @@ def test_dataloaders(train_loader, val_loader, show_val: bool = True):
             break
 
 
+class RoPEPositionalEncoding:
+    def __init__(self, max_len, d_model, nums_head=8, batch_size=1, device=None):
+        self.max_len = max_len
+        self.d_model = d_model
+        self.nums_head = nums_head
+        self.batch_size = batch_size
+
+        if device is None:
+            self.device = get_device()
+        else:
+            self.device = device
+
+    def sinusoidal_position_embedding(self):
+        """
+        生成RoPE位置编码矩阵
+        返回: [batch_size, nums_head, max_len, d_model]
+        """
+        # (max_len, 1)
+        position = torch.arange(0, self.max_len, dtype=torch.float).unsqueeze(-1)
+
+        # (d_model//2)
+        ids = torch.arange(0, self.d_model // 2, dtype=torch.float)
+        theta = torch.pow(10000, -2 * ids / self.d_model)
+
+        # (max_len, d_model//2)
+        embeddings = position * theta
+
+        # (max_len, d_model//2, 2)
+        embeddings = torch.stack([torch.sin(embeddings), torch.cos(embeddings)], dim=-1)
+
+        # (batch_size, nums_head, max_len, d_model//2, 2)
+        embeddings = embeddings.repeat((self.batch_size, self.nums_head, *([1] * len(embeddings.shape))))
+
+        # (batch_size, nums_head, max_len, d_model)
+        embeddings = torch.reshape(embeddings, (self.batch_size, self.nums_head, self.max_len, self.d_model))
+
+        return embeddings.to(self.device)
+
+    def get_rope_embedding_matrix(self):
+        """
+        获取RoPE位置编码矩阵用于可视化
+        返回: [max_len, d_model]
+        """
+        # 只取第一个batch和第一个head的位置编码
+        rope_emb = self.sinusoidal_position_embedding()
+        return rope_emb[0, 0].detach().cpu()  # [max_len, d_model]
+
+    def get_rotation_matrices(self, positions_to_show=5):
+        """
+        获取旋转矩阵的可视化数据
+        对于每个位置，计算旋转矩阵对向量的影响
+        """
+        # 生成一些测试向量
+        test_vectors = []
+        for i in range(4):
+            angle = i * math.pi / 4  # 0, 45, 90, 135度
+            vec = torch.tensor([math.cos(angle), math.sin(angle)], dtype=torch.float32)
+            test_vectors.append(vec)
+
+        # 计算旋转效果
+        rotation_data = []
+        for pos in range(min(positions_to_show, self.max_len)):
+            pos_emb = self.sinusoidal_position_embedding()[0, 0, pos]  # 取第一个位置编码
+
+            rotated_vectors = []
+            for vec in test_vectors:
+                # 简化版的旋转计算（只考虑前两个维度）
+                cos_theta = pos_emb[1]  # cos分量
+                sin_theta = pos_emb[0]  # sin分量
+
+                # 旋转矩阵 [cos, -sin; sin, cos]
+                rotation_matrix = torch.tensor([
+                    [cos_theta, -sin_theta],
+                    [sin_theta, cos_theta]
+                ])
+
+                rotated_vec = torch.matmul(rotation_matrix, vec)
+                rotated_vectors.append({
+                    'original': vec.numpy(),
+                    'rotated': rotated_vec.numpy(),
+                    'position': pos
+                })
+
+            rotation_data.append(rotated_vectors)
+
+        return rotation_data
+
+
+
 def get_position_embedding(sentence_length: int, d_model: int, device="cuda", dtype=torch.float32):
     """
     返回 position 对应的 embedding 矩阵
@@ -515,12 +617,13 @@ class MultiHeadAttention(nn.Module):
       q, k, v: [B, L, d_model]
     """
 
-    def __init__(self, d_model: int, num_heads: int):
+    def __init__(self, d_model: int, num_heads: int, use_rope: bool = False):
         super().__init__()
         assert d_model % num_heads == 0, "d_model 必须能被 num_heads 整除"
         self.d_model = d_model
         self.num_heads = num_heads
         self.depth = d_model // num_heads  # 每个头的维度 Dh
+        self.use_rope = use_rope
 
         # 对应 Keras 的 Dense(d_model)
         self.WQ = nn.Linear(d_model, d_model, bias=True)
@@ -528,6 +631,28 @@ class MultiHeadAttention(nn.Module):
         self.WV = nn.Linear(d_model, d_model, bias=True)
 
         self.out_proj = nn.Linear(d_model, d_model, bias=True)
+
+    def _rope_get_cos_sin(self, seq_len: int, head_dim: int, device):
+        half_dim = head_dim // 2
+        inv_freq = torch.pow(10000, -2 * torch.arange(half_dim, device=device, dtype=torch.float32) / head_dim)
+        positions = torch.arange(seq_len, device=device, dtype=torch.float32)
+        freqs = torch.einsum('l,d->ld', positions, inv_freq)  # [L, half_dim]
+        cos = torch.cos(freqs)
+        sin = torch.sin(freqs)
+        return cos, sin  # [L, half_dim]
+
+    def _rope_apply(self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor):
+        # x: [B, H, L, Dh]; cos/sin: [L, Dh/2]
+        B, H, L, Dh = x.shape
+        x_ = x.view(B, H, L, Dh // 2, 2)
+        x1 = x_[..., 0]
+        x2 = x_[..., 1]
+        cos = cos.view(1, 1, L, Dh // 2)
+        sin = sin.view(1, 1, L, Dh // 2)
+        rot0 = x1 * cos - x2 * sin
+        rot1 = x1 * sin + x2 * cos
+        out = torch.stack([rot0, rot1], dim=-1).view(B, H, L, Dh)
+        return out
 
     def _split_heads(self, x: torch.Tensor):
         """
@@ -566,6 +691,15 @@ class MultiHeadAttention(nn.Module):
         q = self._split_heads(q)  # [B, H, Lq, Dh]
         k = self._split_heads(k)  # [B, H, Lk, Dh]
         v = self._split_heads(v)  # [B, H, Lv, Dh]
+
+        # 应用 RoPE 到 q,k（不作用于 v）
+        if self.use_rope:
+            Lq = q.size(2)
+            Lk = k.size(2)
+            cos_q, sin_q = self._rope_get_cos_sin(Lq, self.depth, q.device)
+            cos_k, sin_k = self._rope_get_cos_sin(Lk, self.depth, k.device)
+            q = self._rope_apply(q, cos_q, sin_q)
+            k = self._rope_apply(k, cos_k, sin_k)
 
         # 处理 mask：广播到 [B, H, Lq, Lk]
         if mask is not None:
@@ -617,9 +751,9 @@ class EncoderLayer(nn.Module):
       src_mask: [B, 1, L, L] 或 [B, L, L]，其中 1 表示屏蔽，0 表示保留
     """
 
-    def __init__(self, d_model: int, num_heads: int, dff: int, rate: float = 0.1):
+    def __init__(self, d_model: int, num_heads: int, dff: int, rate: float = 0.1, use_rope: bool = True):
         super().__init__()
-        self.mha = MultiHeadAttention(d_model, num_heads)  # 前面已实现
+        self.mha = MultiHeadAttention(d_model, num_heads, use_rope=use_rope)  # 前面已实现
         self.ffn = feed_forward_network(d_model, dff)  # 前面已实现
 
         self.norm1 = nn.LayerNorm(d_model, eps=1e-6)
@@ -658,10 +792,10 @@ class DecoderLayer(nn.Module):
       enc_dec_mask: [B, 1, L_tgt, L_src] 或 [B, L_tgt, L_src]  (decoder 对 encoder 的 padding 掩码，1=屏蔽)
     """
 
-    def __init__(self, d_model: int, num_heads: int, dff: int, rate: float = 0.1):
+    def __init__(self, d_model: int, num_heads: int, dff: int, rate: float = 0.1, use_rope: bool = True):
         super().__init__()
-        self.mha1 = MultiHeadAttention(d_model, num_heads)  # masked self-attn
-        self.mha2 = MultiHeadAttention(d_model, num_heads)  # cross-attn
+        self.mha1 = MultiHeadAttention(d_model, num_heads, use_rope=use_rope)  # masked self-attn
+        self.mha2 = MultiHeadAttention(d_model, num_heads, use_rope=use_rope)  # cross-attn
 
         self.ffn = feed_forward_network(d_model, dff)
 
@@ -701,7 +835,7 @@ class DecoderLayer(nn.Module):
 class EncoderModel(nn.Module):
     def __init__(self, num_layers: int, input_vocab_size: int, max_length: int,
                  d_model: int, num_heads: int, dff: int, rate: float = 0.1,
-                 padding_idx: int = None):
+                 padding_idx: int = None, use_rope: bool = True):
         """
         参数与 Keras 版本对齐；额外提供 padding_idx 以便 Embedding 忽略 pad 的梯度。
         """
@@ -713,15 +847,17 @@ class EncoderModel(nn.Module):
         # Embedding
         self.embedding = nn.Embedding(input_vocab_size, d_model, padding_idx=padding_idx)
 
-        # 位置编码：注册为 buffer（不参与训练/优化器）
-        pe = get_position_embedding(max_length, d_model)  # [1, max_len, d_model]
-        self.register_buffer("position_embedding", pe, persistent=False)
+        # 位置编码（默认使用 RoPE，不注册绝对位置编码）
+        self.use_rope = use_rope
+        if not self.use_rope:
+            pe = get_position_embedding(max_length, d_model)  # [1, max_len, d_model]
+            self.register_buffer("position_embedding", pe, persistent=False)
 
         self.dropout = nn.Dropout(rate)
 
         # 堆叠 EncoderLayer（前面我们已实现过）
         self.encoder_layers = nn.ModuleList(
-            [EncoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
+            [EncoderLayer(d_model, num_heads, dff, rate, use_rope=self.use_rope) for _ in range(num_layers)]
         )
 
         # 预存缩放因子
@@ -743,7 +879,8 @@ class EncoderModel(nn.Module):
         # 缩放：使 embedding 的尺度与位置编码相近（论文做法）
         x = x * self.scale
         # 加位置编码（按实际序列长度切片）
-        x = x + self.position_embedding[:, :L, :]
+        if not self.use_rope:
+            x = x + self.position_embedding[:, :L, :]
 
         x = self.dropout(x)
 
@@ -763,7 +900,7 @@ class DecoderModel(nn.Module):
 
     def __init__(self, num_layers: int, target_vocab_size: int, max_length: int,
                  d_model: int, num_heads: int, dff: int, rate: float = 0.1,
-                 padding_idx: int = None):
+                 padding_idx: int = None, use_rope: bool = True):
         super().__init__()
         self.num_layers = num_layers
         self.max_length = max_length
@@ -772,15 +909,17 @@ class DecoderModel(nn.Module):
         # 词嵌入
         self.embedding = nn.Embedding(target_vocab_size, d_model, padding_idx=padding_idx)
 
-        # 位置编码（注册为 buffer，不参与训练）
-        pe = get_position_embedding(max_length, d_model)
-        self.register_buffer("position_embedding", pe, persistent=False)
+        # 位置编码（默认使用 RoPE，不注册绝对位置编码）
+        self.use_rope = use_rope
+        if not self.use_rope:
+            pe = get_position_embedding(max_length, d_model)
+            self.register_buffer("position_embedding", pe, persistent=False)
 
         self.dropout = nn.Dropout(rate)
 
         # 堆叠解码层
         self.decoder_layers = nn.ModuleList(
-            [DecoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
+            [DecoderLayer(d_model, num_heads, dff, rate, use_rope=self.use_rope) for _ in range(num_layers)]
         )
 
         self.scale = math.sqrt(d_model)
@@ -798,7 +937,8 @@ class DecoderModel(nn.Module):
 
         # (B, Lt, D)
         x = self.embedding(x) * self.scale
-        x = x + self.position_embedding[:, :Lt, :]
+        if not self.use_rope:
+            x = x + self.position_embedding[:, :Lt, :]
         x = self.dropout(x)
 
         attention_weights = {}
@@ -815,7 +955,8 @@ class DecoderModel(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, num_layers, input_vocab_size, target_vocab_size,
                  max_length, d_model, num_heads, dff, rate=0.1,
-                 src_padding_idx: int = None, tgt_padding_idx: int = None):
+                 src_padding_idx: int = None, tgt_padding_idx: int = None,
+                 use_rope: bool = True):
         super().__init__()
         self.encoder_model = EncoderModel(
             num_layers=num_layers,
@@ -826,6 +967,7 @@ class Transformer(nn.Module):
             dff=dff,
             rate=rate,
             padding_idx=src_padding_idx,
+            use_rope=use_rope,
         )
         self.decoder_model = DecoderModel(
             num_layers=num_layers,
@@ -836,6 +978,7 @@ class Transformer(nn.Module):
             dff=dff,
             rate=rate,
             padding_idx=tgt_padding_idx,
+            use_rope=use_rope,
         )
         # 等价于 Keras 的 Dense(target_vocab_size)
         self.final_layer = nn.Linear(d_model, target_vocab_size)
@@ -1418,9 +1561,9 @@ if __name__ == "__main__":
     test_dataloaders(train_loader2, val_loader2)
 
     # 4. 位置编码
-    # 4.2 【测试】 - 打印位置编码矩阵图形
-    position_embedding = get_position_embedding(max_length, d_model)
-    plot_position_embedding(position_embedding)
+    # 默认启用 RoPE，不再可视化绝对位置编码；如需对比，可手动打开：
+    # position_embedding = get_position_embedding(max_length, d_model)
+    # plot_position_embedding(position_embedding)
 
     # 5. 构建 model 模型 Transformer 结构
     input_vocab_size = pt_tokenizer.vocab_size
@@ -1437,6 +1580,7 @@ if __name__ == "__main__":
         rate=dropout_rate,
         src_padding_idx=pt_tokenizer.pad_token_id if hasattr(pt_tokenizer, "pad_token_id") else None,
         tgt_padding_idx=en_tokenizer.pad_token_id if hasattr(en_tokenizer, "pad_token_id") else None,
+        use_rope=True,
     )
 
     ##############################【Test - optimizer | scheduler 】##############################
